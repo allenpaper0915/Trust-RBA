@@ -11,6 +11,9 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { DemoProvider } from "@/components/demo-state";
+import { AppShell } from "@/components/app-shell";
+
 
 function NotFoundComponent() {
   return (
