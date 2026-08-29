@@ -1,6 +1,6 @@
 # TrustRBA: Verifiable Compliance
 
-TrustRBA — Lovable Development Prompt
+產品規格與 Hackathon 需求文件
 
 最高優先級要求
 
@@ -1419,19 +1419,10 @@ TrustRBA 的目標，就是把：
 
 「任何人都可以驗證我們為什麼符合 RBA。」
 
-This project was built with [Lovable](https://lovable.dev).
-
-## Build with Lovable
-
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/b402d0ca-d7b8-48a3-84f4-20d6f5cf28b7).
-
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
 
 ## Development
 
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
+需要 Node.js 與 bun（或 npm）。
 
 ```sh
 git clone <this-repository-url>

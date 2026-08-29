@@ -1,8 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Info } from "lucide-react";
+import { useMemo } from "react";
+import { ArrowRight, Info, Users } from "lucide-react";
 
-import { benchmark, enterprise } from "@/data/demo";
+import { benchmark, enterprise, money } from "@/data/compliance";
+import { statusMeta } from "@/data/cases";
+import { assessCase } from "@/lib/risk-engine";
+import { benchmarkFor } from "@/lib/analysis";
+import { usePlatform } from "@/components/platform-store";
 import { SectionHeading, StatusPill } from "@/components/status-pill";
+import { WorkflowNav } from "@/components/page-header";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -11,64 +18,202 @@ export const Route = createFileRoute("/dashboard")({
       {
         name: "description",
         content:
-          "ABC Electronics 的 RBA 移工招聘合規總覽：合規分數、移工與仲介數量、證據紀錄與全球招聘費基準比較。",
+          "ABC Electronics 的 RBA 移工招聘合規總覽：審核佇列、移工自主申報、仲介風險排行與全球招聘費基準比較。",
       },
       { property: "og:title", content: "合規總覽｜TrustRBA" },
-      { property: "og:description", content: "合規分數 87 / 100，5 件高風險案件待人工審核。" },
+      { property: "og:description", content: "待審案件、確認超收金額與仲介風險，一頁掌握。" },
     ],
   }),
   component: Dashboard,
 });
 
-const money = (n: number) => `NT$${n.toLocaleString("en-US")}`;
-
 function Dashboard() {
+  const { cases } = usePlatform();
+
+  const stats = useMemo(() => {
+    const pending = cases.filter((c) => c.state === "pending_review");
+    const confirmed = cases.filter((c) => c.state === "confirmed" || c.state === "remediated");
+    const refundTotal = confirmed.reduce((s, c) => s + (c.review?.refund ?? 0), 0);
+    const outstanding = cases.filter((c) => c.state === "confirmed").length;
+    const workerCases = cases.filter((c) => c.source === "worker");
+    // 合規分數：以未結案的高風險比例扣分，讓分數會隨審核動作變動。
+    const openHigh = cases.filter(
+      (c) => assessCase(c).riskScore >= 60 && !["dismissed", "remediated"].includes(c.state),
+    ).length;
+    const score = Math.max(40, 100 - openHigh * 4);
+    return { pending, confirmed, refundTotal, outstanding, workerCases, score };
+  }, [cases]);
+
+  /** 仲介風險排行：把散落的案件收斂成「該找誰談」。 */
+  const agencyRisk = useMemo(() => {
+    const map = new Map<string, { agency: string; count: number; over: number; risk: number }>();
+    for (const c of cases) {
+      const base = benchmarkFor(c.origin);
+      const row = map.get(c.agency) ?? { agency: c.agency, count: 0, over: 0, risk: 0 };
+      row.count += 1;
+      row.over += Math.max(0, c.fee - base);
+      row.risk = Math.max(row.risk, assessCase(c).riskScore);
+      map.set(c.agency, row);
+    }
+    return [...map.values()].sort((a, b) => b.over - a.over);
+  }, [cases]);
+
+  const recent = useMemo(
+    () => [...cases].sort((a, b) => b.submittedAt.localeCompare(a.submittedAt)).slice(0, 5),
+    [cases],
+  );
+
   const maxValue = Math.max(...benchmark.corridors.map((c) => c.enterprise));
 
   return (
     <div className="space-y-12">
-      <div>
-        <h1 className="text-2xl font-bold text-primary-deep">合規總覽</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {enterprise.name} · RBA 移工招聘合規
-        </p>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-primary-deep">合規總覽</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{enterprise.name} · RBA 移工招聘合規</p>
+        </div>
+        <Link
+          to="/cases"
+          className="inline-flex items-center gap-2 rounded-md bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-deep"
+        >
+          進入審核佇列 <ArrowRight className="size-4" />
+        </Link>
       </div>
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-        <div className="card-surface p-6 xl:col-span-1">
+        <div className="card-surface p-6">
           <div className="text-sm text-muted-foreground">合規分數</div>
           <div className="mt-2 flex items-baseline gap-1">
-            <span className="num text-4xl text-primary-deep">{enterprise.complianceScore}</span>
+            <span className="num text-4xl text-primary-deep">{stats.score}</span>
             <span className="text-sm text-muted-foreground">/ 100</span>
           </div>
           <div className="mt-3 h-1.5 w-full rounded-full bg-muted">
             <div
-              className="h-1.5 rounded-full bg-warning"
-              style={{ width: `${enterprise.complianceScore}%` }}
+              className={cn("h-1.5 rounded-full", stats.score >= 85 ? "bg-success" : "bg-warning")}
+              style={{ width: `${stats.score}%` }}
             />
           </div>
           <div className="mt-4">
-            <StatusPill tone="warning">需要注意</StatusPill>
+            <StatusPill tone={stats.score >= 85 ? "success" : "warning"}>
+              {stats.score >= 85 ? "狀態良好" : "需要注意"}
+            </StatusPill>
+          </div>
+          <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">
+            未結案的高風險案件每件扣 4 分，結案後自動回補。
+          </p>
+        </div>
+
+        <div className="card-surface border-warning/35 p-6">
+          <div className="text-sm text-muted-foreground">待人工審核</div>
+          <div className="num mt-2 text-4xl text-warning-foreground">{stats.pending.length}</div>
+          <Link to="/cases" className="mt-4 inline-block text-xs text-primary hover:underline">
+            開始審核 →
+          </Link>
+        </div>
+
+        <div className="card-surface p-6">
+          <div className="text-sm text-muted-foreground">移工自主申報</div>
+          <div className="num mt-2 text-4xl text-primary-deep">{stats.workerCases.length}</div>
+          <Link
+            to="/worker"
+            className="mt-4 inline-flex items-center gap-1 text-xs text-primary hover:underline"
+          >
+            <Users className="size-3" /> 查看移工端 →
+          </Link>
+        </div>
+
+        <div className="card-surface border-danger/25 p-6">
+          <div className="text-sm text-muted-foreground">已確認不當收費</div>
+          <div className="num mt-2 text-4xl text-danger">{stats.confirmed.length}</div>
+          <div className="mt-2 text-xs text-muted-foreground">
+            其中 {stats.outstanding} 件尚未完成返還
           </div>
         </div>
 
-        {[
-          { label: "移工人數", value: enterprise.workers },
-          { label: "招聘仲介", value: enterprise.agencies },
-          { label: "證據紀錄", value: enterprise.evidence },
-        ].map((c) => (
-          <div key={c.label} className="card-surface p-6">
-            <div className="text-sm text-muted-foreground">{c.label}</div>
-            <div className="num mt-2 text-4xl text-primary-deep">{c.value}</div>
-          </div>
-        ))}
-
-        <div className="card-surface border-danger/25 p-6">
-          <div className="text-sm text-muted-foreground">高風險案件</div>
-          <div className="num mt-2 text-4xl text-danger">{enterprise.highRiskCases}</div>
-          <Link to="/cases" className="mt-4 inline-block text-xs text-primary hover:underline">
-            查看風險案件 →
+        <div className="card-surface p-6">
+          <div className="text-sm text-muted-foreground">已核定返還金額</div>
+          <div className="num mt-2 text-3xl text-primary-deep">{money(stats.refundTotal)}</div>
+          <Link
+            to="/remediation"
+            className="mt-4 inline-block text-xs text-primary hover:underline"
+          >
+            改善與返還 →
           </Link>
+        </div>
+      </section>
+
+      {/* 佇列 + 仲介風險 */}
+      <section className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+        <div className="card-surface">
+          <div className="flex items-center justify-between border-b border-border px-6 py-4">
+            <h2 className="text-base font-bold text-primary-deep">最新案件</h2>
+            <Link to="/cases" className="text-xs text-primary hover:underline">
+              查看全部 →
+            </Link>
+          </div>
+          <ul className="divide-y divide-border">
+            {recent.map((c) => {
+              const a = assessCase(c);
+              const meta = statusMeta[c.state];
+              return (
+                <li key={c.id}>
+                  <Link
+                    to="/cases/$id"
+                    params={{ id: c.id }}
+                    className="flex flex-wrap items-center justify-between gap-4 px-6 py-4 transition-colors hover:bg-muted"
+                  >
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2.5">
+                        <span className="num text-sm text-primary">#{c.id}</span>
+                        <span className="text-sm text-primary-deep">{c.worker}</span>
+                        {c.source === "worker" && (
+                          <span className="rounded border border-primary/25 bg-primary-soft px-1.5 py-0.5 text-[10px] text-primary">
+                            移工申報
+                          </span>
+                        )}
+                      </div>
+                      <div className="mt-0.5 text-xs text-muted-foreground">
+                        {c.origin} · {c.agency} · {c.submittedAt}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <span className="num text-sm text-primary-deep">{money(c.fee)}</span>
+                      <StatusPill tone={a.tone}>{a.riskScore}</StatusPill>
+                      <StatusPill tone={meta.tone}>{meta.short}</StatusPill>
+                    </div>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+
+        <div className="card-surface p-6">
+          <h2 className="text-base font-bold text-primary-deep">仲介風險排行</h2>
+          <p className="mt-1.5 text-sm text-muted-foreground">
+            以「高於基準的累計金額」排序，指出應優先約談的合作對象。
+          </p>
+          <ul className="mt-6 space-y-4 border-t border-border pt-5">
+            {agencyRisk.map((r) => (
+              <li key={r.agency}>
+                <div className="flex items-baseline justify-between gap-3 text-sm">
+                  <span className="min-w-0 truncate text-primary-deep">{r.agency}</span>
+                  <span className="num shrink-0 text-danger">{money(r.over)}</span>
+                </div>
+                <div className="mt-1.5 h-2 rounded bg-muted">
+                  <div
+                    className="h-2 rounded bg-danger"
+                    style={{
+                      width: `${Math.round((r.over / Math.max(agencyRisk[0]?.over ?? 1, 1)) * 100)}%`,
+                    }}
+                  />
+                </div>
+                <div className="mt-1 text-[11px] text-muted-foreground">
+                  {r.count} 件 · 最高風險分數 {r.risk}
+                </div>
+              </li>
+            ))}
+          </ul>
         </div>
       </section>
 
@@ -76,12 +221,16 @@ function Dashboard() {
         <SectionHeading
           title="全球招聘費基準"
           subtitle={`參考 ${benchmark.sources}`}
-          aside={<StatusPill tone="primary" dot={false}>Real-world Benchmark</StatusPill>}
+          aside={
+            <StatusPill tone="primary" dot={false}>
+              Real-world Benchmark
+            </StatusPill>
+          }
         />
         <div className="card-surface p-8">
           <p className="max-w-3xl text-sm leading-loose text-muted-foreground">
             TrustRBA 使用公開的全球移工招聘成本資料，建立 Migration Cost
-            Benchmark，協助企業辨識異常模式。
+            Benchmark，做為每一件申報的比較基準。
           </p>
 
           <div className="mt-8 grid gap-10 lg:grid-cols-[1.3fr_0.7fr]">
@@ -150,6 +299,8 @@ function Dashboard() {
           </div>
         </div>
       </section>
+
+      <WorkflowNav current="/dashboard" />
     </div>
   );
 }

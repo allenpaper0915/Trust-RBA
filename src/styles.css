@@ -67,8 +67,7 @@
 
 :root {
   --radius: 0.5rem;
-  --font-tc:
-    "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", -apple-system, sans-serif;
+  --font-tc: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", -apple-system, sans-serif;
 
   --background: oklch(0.979 0.003 250);
   --foreground: oklch(0.255 0.021 258);

@@ -10,11 +10,32 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuditRouteImport } from './routes/audit'
+import { Route as CredentialRouteImport } from './routes/credential'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as EvidenceRouteImport } from './routes/evidence'
+import { Route as RemediationRouteImport } from './routes/remediation'
+import { Route as VerificationRouteImport } from './routes/verification'
+import { Route as VerifyRouteImport } from './routes/verify'
+import { Route as CasesIndexRouteImport } from './routes/cases/index'
+import { Route as CasesIdRouteImport } from './routes/cases/$id'
+import { Route as WorkerIndexRouteImport } from './routes/worker/index'
+import { Route as WorkerSubmitRouteImport } from './routes/worker/submit'
+import { Route as WorkerCaseCodeRouteImport } from './routes/worker/case.$code'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuditRoute = AuditRouteImport.update({
+  id: '/audit',
+  path: '/audit',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CredentialRoute = CredentialRouteImport.update({
+  id: '/credential',
+  path: '/credential',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -22,31 +43,160 @@ const DashboardRoute = DashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
+const EvidenceRoute = EvidenceRouteImport.update({
+  id: '/evidence',
+  path: '/evidence',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RemediationRoute = RemediationRouteImport.update({
+  id: '/remediation',
+  path: '/remediation',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VerificationRoute = VerificationRouteImport.update({
+  id: '/verification',
+  path: '/verification',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VerifyRoute = VerifyRouteImport.update({
+  id: '/verify',
+  path: '/verify',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CasesIndexRoute = CasesIndexRouteImport.update({
+  id: '/cases/',
+  path: '/cases/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CasesIdRoute = CasesIdRouteImport.update({
+  id: '/cases/$id',
+  path: '/cases/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorkerIndexRoute = WorkerIndexRouteImport.update({
+  id: '/worker/',
+  path: '/worker/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorkerSubmitRoute = WorkerSubmitRouteImport.update({
+  id: '/worker/submit',
+  path: '/worker/submit',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorkerCaseCodeRoute = WorkerCaseCodeRouteImport.update({
+  id: '/worker/case/$code',
+  path: '/worker/case/$code',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/audit': typeof AuditRoute
+  '/credential': typeof CredentialRoute
   '/dashboard': typeof DashboardRoute
+  '/evidence': typeof EvidenceRoute
+  '/remediation': typeof RemediationRoute
+  '/verification': typeof VerificationRoute
+  '/verify': typeof VerifyRoute
+  '/cases/$id': typeof CasesIdRoute
+  '/worker/submit': typeof WorkerSubmitRoute
+  '/cases/': typeof CasesIndexRoute
+  '/worker/': typeof WorkerIndexRoute
+  '/worker/case/$code': typeof WorkerCaseCodeRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/audit': typeof AuditRoute
+  '/credential': typeof CredentialRoute
   '/dashboard': typeof DashboardRoute
+  '/evidence': typeof EvidenceRoute
+  '/remediation': typeof RemediationRoute
+  '/verification': typeof VerificationRoute
+  '/verify': typeof VerifyRoute
+  '/cases/$id': typeof CasesIdRoute
+  '/worker/submit': typeof WorkerSubmitRoute
+  '/cases': typeof CasesIndexRoute
+  '/worker': typeof WorkerIndexRoute
+  '/worker/case/$code': typeof WorkerCaseCodeRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/audit': typeof AuditRoute
+  '/credential': typeof CredentialRoute
   '/dashboard': typeof DashboardRoute
+  '/evidence': typeof EvidenceRoute
+  '/remediation': typeof RemediationRoute
+  '/verification': typeof VerificationRoute
+  '/verify': typeof VerifyRoute
+  '/cases/$id': typeof CasesIdRoute
+  '/worker/submit': typeof WorkerSubmitRoute
+  '/cases/': typeof CasesIndexRoute
+  '/worker/': typeof WorkerIndexRoute
+  '/worker/case/$code': typeof WorkerCaseCodeRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/dashboard'
+  fullPaths:
+    | '/'
+    | '/audit'
+    | '/credential'
+    | '/dashboard'
+    | '/evidence'
+    | '/remediation'
+    | '/verification'
+    | '/verify'
+    | '/cases/$id'
+    | '/worker/submit'
+    | '/cases/'
+    | '/worker/'
+    | '/worker/case/$code'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/dashboard'
-  id: '__root__' | '/' | '/dashboard'
+  to:
+    | '/'
+    | '/audit'
+    | '/credential'
+    | '/dashboard'
+    | '/evidence'
+    | '/remediation'
+    | '/verification'
+    | '/verify'
+    | '/cases/$id'
+    | '/worker/submit'
+    | '/cases'
+    | '/worker'
+    | '/worker/case/$code'
+  id:
+    | '__root__'
+    | '/'
+    | '/audit'
+    | '/credential'
+    | '/dashboard'
+    | '/evidence'
+    | '/remediation'
+    | '/verification'
+    | '/verify'
+    | '/cases/$id'
+    | '/worker/submit'
+    | '/cases/'
+    | '/worker/'
+    | '/worker/case/$code'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuditRoute: typeof AuditRoute
+  CredentialRoute: typeof CredentialRoute
   DashboardRoute: typeof DashboardRoute
+  EvidenceRoute: typeof EvidenceRoute
+  RemediationRoute: typeof RemediationRoute
+  VerificationRoute: typeof VerificationRoute
+  VerifyRoute: typeof VerifyRoute
+  CasesIdRoute: typeof CasesIdRoute
+  WorkerSubmitRoute: typeof WorkerSubmitRoute
+  CasesIndexRoute: typeof CasesIndexRoute
+  WorkerIndexRoute: typeof WorkerIndexRoute
+  WorkerCaseCodeRoute: typeof WorkerCaseCodeRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -58,6 +208,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/audit': {
+      id: '/audit'
+      path: '/audit'
+      fullPath: '/audit'
+      preLoaderRoute: typeof AuditRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/credential': {
+      id: '/credential'
+      path: '/credential'
+      fullPath: '/credential'
+      preLoaderRoute: typeof CredentialRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dashboard': {
       id: '/dashboard'
       path: '/dashboard'
@@ -65,12 +229,86 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/evidence': {
+      id: '/evidence'
+      path: '/evidence'
+      fullPath: '/evidence'
+      preLoaderRoute: typeof EvidenceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/remediation': {
+      id: '/remediation'
+      path: '/remediation'
+      fullPath: '/remediation'
+      preLoaderRoute: typeof RemediationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/verification': {
+      id: '/verification'
+      path: '/verification'
+      fullPath: '/verification'
+      preLoaderRoute: typeof VerificationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/verify': {
+      id: '/verify'
+      path: '/verify'
+      fullPath: '/verify'
+      preLoaderRoute: typeof VerifyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cases/': {
+      id: '/cases/'
+      path: '/cases'
+      fullPath: '/cases/'
+      preLoaderRoute: typeof CasesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cases/$id': {
+      id: '/cases/$id'
+      path: '/cases/$id'
+      fullPath: '/cases/$id'
+      preLoaderRoute: typeof CasesIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/worker/': {
+      id: '/worker/'
+      path: '/worker'
+      fullPath: '/worker/'
+      preLoaderRoute: typeof WorkerIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/worker/submit': {
+      id: '/worker/submit'
+      path: '/worker/submit'
+      fullPath: '/worker/submit'
+      preLoaderRoute: typeof WorkerSubmitRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/worker/case/$code': {
+      id: '/worker/case/$code'
+      path: '/worker/case/$code'
+      fullPath: '/worker/case/$code'
+      preLoaderRoute: typeof WorkerCaseCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuditRoute: AuditRoute,
+  CredentialRoute: CredentialRoute,
   DashboardRoute: DashboardRoute,
+  EvidenceRoute: EvidenceRoute,
+  RemediationRoute: RemediationRoute,
+  VerificationRoute: VerificationRoute,
+  VerifyRoute: VerifyRoute,
+  CasesIdRoute: CasesIdRoute,
+  WorkerSubmitRoute: WorkerSubmitRoute,
+  CasesIndexRoute: CasesIndexRoute,
+  WorkerIndexRoute: WorkerIndexRoute,
+  WorkerCaseCodeRoute: WorkerCaseCodeRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

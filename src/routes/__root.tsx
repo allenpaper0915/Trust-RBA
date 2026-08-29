@@ -7,13 +7,12 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import type { ReactNode } from "react";
 
 import appCss from "../styles.css?url";
-import { reportLovableError } from "../lib/lovable-error-reporting";
-import { DemoProvider } from "@/components/demo-state";
+import { SessionProvider } from "@/components/session-state";
 import { AppShell } from "@/components/app-shell";
-
+import { PlatformProvider } from "@/components/platform-store";
 
 function NotFoundComponent() {
   return (
@@ -40,9 +39,6 @@ function NotFoundComponent() {
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   console.error(error);
   const router = useRouter();
-  useEffect(() => {
-    reportLovableError(error, { boundary: "tanstack_root_error_component" });
-  }, [error]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -89,7 +85,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:title", content: "TrustRBA｜可信 AI 合規驗證平台" },
       {
         property: "og:description",
-        content: "不只是聲稱合規，而是證明合規。Trustworthy AI for Verifiable Migrant Worker Compliance。",
+        content:
+          "不只是聲稱合規，而是證明合規。Trustworthy AI for Verifiable Migrant Worker Compliance。",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -134,13 +131,14 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <DemoProvider>
-        <AppShell>
-          {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-          <Outlet />
-        </AppShell>
-      </DemoProvider>
+      <PlatformProvider>
+        <SessionProvider>
+          <AppShell>
+            {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+            <Outlet />
+          </AppShell>
+        </SessionProvider>
+      </PlatformProvider>
     </QueryClientProvider>
   );
 }
-

@@ -18,7 +18,7 @@ const DemoContext = createContext<DemoState | null>(null);
 
 const KEY = "trustrba-demo-state";
 
-export function DemoProvider({ children }: { children: ReactNode }) {
+export function SessionProvider({ children }: { children: ReactNode }) {
   const [demoMode, setDemoMode] = useState(true);
   const [presentation, setPresentation] = useState(false);
   const [revoked, setRevoked] = useState(false);
@@ -51,6 +51,18 @@ export function DemoProvider({ children }: { children: ReactNode }) {
     }
   }, [demoMode, presentation, revoked, verified, reviewApproved]);
 
+  /**
+   * Demo Mode 開啟時預先載入完整劇情狀態，避免任何頁面出現空白；
+   * 關閉時清回原始狀態，方便從第一步開始錄影。
+   */
+  const toggleDemoMode = useCallback(() => {
+    const next = !demoMode;
+    setDemoMode(next);
+    setVerified(next);
+    setReviewApproved(next);
+    setRevoked(false);
+  }, [demoMode]);
+
   const resetDemo = useCallback(() => {
     setRevoked(false);
     setVerified(false);
@@ -66,7 +78,7 @@ export function DemoProvider({ children }: { children: ReactNode }) {
         revoked,
         verified,
         reviewApproved,
-        toggleDemoMode: () => setDemoMode((v) => !v),
+        toggleDemoMode,
         togglePresentation: () => setPresentation((v) => !v),
         setRevoked,
         setVerified,
@@ -79,8 +91,8 @@ export function DemoProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function useDemo() {
+export function useSession() {
   const ctx = useContext(DemoContext);
-  if (!ctx) throw new Error("useDemo 必須在 DemoProvider 之內使用");
+  if (!ctx) throw new Error("useSession 必須在 SessionProvider 之內使用");
   return ctx;
 }
