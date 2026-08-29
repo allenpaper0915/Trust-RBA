@@ -229,6 +229,7 @@ function WorkerCase() {
               notAllowed: t("fee.notAllowed"),
               allowed: t("fee.allowed"),
               noDocument: t("fee.noDocument"),
+              cash: t("res.untraceable"),
               unregistered: t("fee.unregistered"),
               total: t("fee.total"),
               disallowedTotal: t("fee.disallowedTotal"),

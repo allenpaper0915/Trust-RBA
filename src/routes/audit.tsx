@@ -1,13 +1,29 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
-import { Bot, ShieldCheck, User, Users } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  Bot,
+  Fingerprint,
+  Link2,
+  ShieldAlert,
+  ShieldCheck,
+  User,
+  Users,
+  Wrench,
+} from "lucide-react";
 
 import { credential, revocationAuditLog } from "@/data/compliance";
 import { usePlatform } from "@/components/platform-store";
-import { WorkflowNav, PageHeader } from "@/components/page-header";
+import { PageHeader } from "@/components/page-header";
 import { StatusPill } from "@/components/status-pill";
 import { useSession } from "@/components/session-state";
 import { cn } from "@/lib/utils";
+import {
+  buildChain,
+  verifyChain,
+  shortHash,
+  type ChainedRecord,
+  type ChainVerdict,
+} from "@/lib/proof";
 
 export const Route = createFileRoute("/audit")({
   head: () => ({
@@ -24,58 +40,6 @@ export const Route = createFileRoute("/audit")({
   }),
   component: AuditPage,
 });
-
-/** 可信 AI 的八項要求，並標示在平台的哪一頁被實際落實。 */
-const requirements: { title: string; body: string; to: string; where: string }[] = [
-  {
-    title: "Evidence First",
-    body: "沒有證據，不允許 AI 做高風險結論。",
-    to: "/evidence",
-    where: "證據鏈",
-  },
-  {
-    title: "Explainability",
-    body: "每個 AI 結論都可以追溯到證據。",
-    to: "/cases/2026-024",
-    where: "AI 判斷依據",
-  },
-  {
-    title: "Human-in-the-loop",
-    body: "高風險案件一定需要人工確認。",
-    to: "/cases/2026-024",
-    where: "人工審核",
-  },
-  {
-    title: "Authorization",
-    body: "AI Agent 只能執行被授權的工具與行動。",
-    to: "/verification",
-    where: "AI 驗證中心",
-  },
-  {
-    title: "Auditability",
-    body: "所有 AI 行動都留下紀錄。",
-    to: "/audit",
-    where: "本頁",
-  },
-  {
-    title: "Privacy",
-    body: "第三方驗證時不需要取得完整移工資料。",
-    to: "/credential",
-    where: "隱私保護",
-  },
-  {
-    title: "Expiry",
-    body: "憑證有有效期限。",
-    to: "/credential",
-    where: "合規憑證",
-  },
-  {
-    title: "Revocation",
-    body: "新的高風險證據出現後可以撤銷憑證。",
-    to: "/verify",
-    where: "第三方驗證",
-  },
-];
 
 const actorLabel = {
   worker: "移工",
@@ -130,6 +94,53 @@ function AuditPage() {
     return base;
   }, [events, revoked, caseFilter]);
 
+  // 雜湊鏈：每一筆紀錄含前一筆的雜湊，事後改動任何一筆都會讓後面全部對不上。
+  const [chain, setChain] = useState<ChainedRecord<unknown>[]>([]);
+  const [verdict, setVerdict] = useState<ChainVerdict | null>(null);
+  const [tampered, setTampered] = useState(false);
+  const [checking, setChecking] = useState(false);
+
+  useEffect(() => {
+    let live = true;
+    void buildChain(entries as unknown[]).then((c) => {
+      if (!live) return;
+      setChain(c);
+      setVerdict(null);
+      setTampered(false);
+    });
+    return () => {
+      live = false;
+    };
+  }, [entries]);
+
+  const runCheck = async (records: ChainedRecord<unknown>[]) => {
+    setChecking(true);
+    setVerdict(await verifyChain(records));
+    setChecking(false);
+  };
+
+  /** 直接改掉中間一筆的內容但不重算雜湊——正是事後竄改的樣子。 */
+  const tamper = () => {
+    if (chain.length < 3) return;
+    const i = Math.floor(chain.length / 2);
+    const next = chain.map((r, k) =>
+      k === i
+        ? { ...r, data: { ...(r.data as Record<string, unknown>), result: "（已被改寫）" } }
+        : r,
+    );
+    setChain(next);
+    setTampered(true);
+    void runCheck(next);
+  };
+
+  const restore = () => {
+    void buildChain(entries as unknown[]).then((c) => {
+      setChain(c);
+      setTampered(false);
+      setVerdict(null);
+    });
+  };
+
   return (
     <div className="space-y-12">
       <PageHeader
@@ -157,14 +168,85 @@ function AuditPage() {
         </label>
       </div>
 
+      {/* 完整性：紀錄能不能被事後改掉，是稽核的另一半問題 */}
+      <section
+        className={cn(
+          "rounded-lg border p-7",
+          verdict && !verdict.ok
+            ? "border-danger/30 bg-danger-soft"
+            : verdict?.ok
+              ? "border-success/30 bg-success-soft"
+              : "border-border bg-card",
+        )}
+      >
+        <div className="flex flex-wrap items-start justify-between gap-6">
+          <div className="max-w-2xl">
+            <h2 className="flex items-center gap-2.5 text-base font-bold text-primary-deep">
+              <Link2 className="size-4 text-primary" /> 紀錄完整性
+            </h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              每一筆紀錄都含前一筆的 SHA-256 雜湊，改動任一筆之後的雜湊都會對不上。
+            </p>
+
+            {verdict && (
+              <div
+                className={cn(
+                  "mt-4 inline-flex items-center gap-2 rounded-md border px-4 py-2 text-sm",
+                  verdict.ok
+                    ? "border-success/30 bg-card text-success"
+                    : "border-danger/30 bg-card text-danger",
+                )}
+              >
+                {verdict.ok ? (
+                  <>
+                    <ShieldCheck className="size-4" /> 全部 {chain.length} 筆雜湊一致，未被竄改
+                  </>
+                ) : (
+                  <>
+                    <ShieldAlert className="size-4" /> 第 {verdict.brokenAt + 1}{" "}
+                    筆起雜湊對不上，紀錄已遭改動
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => void runCheck(chain)}
+              disabled={checking || chain.length === 0}
+              className="inline-flex items-center gap-2 rounded-md bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-deep disabled:opacity-60"
+            >
+              <Fingerprint className="size-4" /> 驗證完整性
+            </button>
+            {tampered ? (
+              <button
+                onClick={restore}
+                className="inline-flex items-center gap-2 rounded-md border border-border-strong bg-card px-4 py-2.5 text-sm text-primary-deep hover:bg-muted"
+              >
+                還原紀錄
+              </button>
+            ) : (
+              <button
+                onClick={tamper}
+                className="inline-flex items-center gap-2 rounded-md border border-border-strong bg-card px-4 py-2.5 text-sm text-muted-foreground hover:bg-muted"
+              >
+                <Wrench className="size-4" /> 模擬竄改一筆
+              </button>
+            )}
+          </div>
+        </div>
+      </section>
+
       <section className="card-surface overflow-x-auto">
-        <div className="grid min-w-[1040px] grid-cols-[150px_110px_1fr_1fr_150px_140px] gap-4 border-b border-border bg-secondary px-7 py-3.5 text-xs font-medium text-muted-foreground">
+        <div className="grid min-w-[1180px] grid-cols-[150px_110px_1fr_1fr_150px_140px_130px] gap-4 border-b border-border bg-secondary px-7 py-3.5 text-xs font-medium text-muted-foreground">
           <span>時間</span>
           <span>執行者</span>
           <span>行動</span>
           <span>證據</span>
           <span>授權</span>
           <span>結果</span>
+          <span>雜湊</span>
         </div>
 
         <ol className="divide-y divide-border">
@@ -172,8 +254,9 @@ function AuditPage() {
             <li
               key={`${e.time}-${e.action}-${i}`}
               className={cn(
-                "grid min-w-[1040px] grid-cols-[150px_110px_1fr_1fr_150px_140px] items-start gap-4 px-7 py-4 text-sm transition-colors hover:bg-muted/60",
+                "grid min-w-[1180px] grid-cols-[150px_110px_1fr_1fr_150px_140px_130px] items-start gap-4 px-7 py-4 text-sm transition-colors hover:bg-muted/60",
                 e.revocation && "bg-danger-soft/40",
+                verdict && !verdict.ok && i >= verdict.brokenAt && "bg-danger-soft/60",
               )}
             >
               <span className="num text-xs text-muted-foreground">
@@ -210,42 +293,21 @@ function AuditPage() {
               >
                 {e.result}
               </span>
+              <span
+                className={cn(
+                  "num text-[11px] break-all",
+                  verdict && !verdict.ok && i >= verdict.brokenAt
+                    ? "text-danger"
+                    : "text-muted-foreground/70",
+                )}
+                title={chain[i]?.hash}
+              >
+                {chain[i] ? shortHash(chain[i]!.hash) : "…"}
+              </span>
             </li>
           ))}
         </ol>
       </section>
-
-      <p className="rounded-md border border-border bg-muted px-5 py-4 text-sm leading-relaxed text-muted-foreground">
-        稽核紀錄同時記錄「AI 做了什麼」與「人做了什麼」。移工送出申報、系統去識別化、AI
-        計分、合規人員的決定與憑證撤銷，都出現在同一條時間線上，因此任何結論都能被事後重建。
-      </p>
-
-      {/* 可信 AI 八項要求 */}
-      <section>
-        <div className="mb-6 border-t border-border pt-10">
-          <h2 className="text-xl font-bold text-primary-deep">可信 AI 的八項要求</h2>
-          <p className="mt-1.5 text-sm text-muted-foreground">
-            Trustworthy AI 不是要求人相信 AI，而是讓 AI 的決策有證據、有治理、可追溯、可驗證。
-          </p>
-        </div>
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {requirements.map((r) => (
-            <Link
-              key={r.title}
-              to={r.to}
-              className="card-surface group p-6 transition-colors hover:border-border-strong hover:bg-muted"
-            >
-              <div className="text-sm font-bold text-primary-deep">{r.title}</div>
-              <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{r.body}</p>
-              <div className="mt-4 text-[11px] text-primary group-hover:underline">
-                展示於：{r.where} →
-              </div>
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      <WorkflowNav current="/audit" />
     </div>
   );
 }

@@ -4,7 +4,6 @@ import { ShieldCheck, SearchCheck, FileCheck2, Building2, Users } from "lucide-r
 import { enterprise } from "@/data/compliance";
 import { usePlatform } from "@/components/platform-store";
 import { StatusPill } from "@/components/status-pill";
-import { WorkflowNav } from "@/components/page-header";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -32,68 +31,6 @@ const features = [
 ];
 
 /** 產品主流程：從移工按下上傳，到第三方可以驗證。 */
-const scenes: { no: string; title: string; body: string; to: string }[] = [
-  {
-    no: "01",
-    title: "移工上傳資料",
-    body: "移工用自己的語言填寫金額並上傳收據、匯款單。",
-    to: "/worker/submit",
-  },
-  {
-    no: "02",
-    title: "自動去識別化",
-    body: "姓名、證件號、電話、帳號在送出前就被遮蔽，移工親眼確認。",
-    to: "/worker/submit",
-  },
-  {
-    no: "03",
-    title: "基準比對",
-    body: "以 ILO / World Bank / KNOMAD 公開資料判斷是否高於合理區間。",
-    to: "/dashboard",
-  },
-  {
-    no: "04",
-    title: "進入審核佇列",
-    body: "移工申報與企業抽樣進入同一個佇列，依風險分數排序。",
-    to: "/cases",
-  },
-  {
-    no: "05",
-    title: "證據交叉驗證",
-    body: "仲介聲明與獨立證據並列，衝突會被明確標示。",
-    to: "/evidence",
-  },
-  {
-    no: "06",
-    title: "人工審核決定",
-    body: "合規人員選擇處置、寫下理由、核定返還金額。",
-    to: "/cases",
-  },
-  {
-    no: "07",
-    title: "回覆移工",
-    body: "決定與回覆同步顯示在移工端，移工不必等通知。",
-    to: "/worker",
-  },
-  {
-    no: "08",
-    title: "改善與返還",
-    body: "追蹤返還進度，改善完成才重新發行憑證。",
-    to: "/remediation",
-  },
-  {
-    no: "09",
-    title: "第三方驗證",
-    body: "品牌客戶輸入憑證編號即可驗證，且憑證可被撤銷。",
-    to: "/verify",
-  },
-];
-
-const closing = [
-  { title: "Evidence", body: "每個判斷都有證據。" },
-  { title: "Governance", body: "AI 在授權與人工監督下運作。" },
-  { title: "Verification", body: "結果可以驗證、過期與撤銷。" },
-];
 
 function Landing() {
   const { cases } = usePlatform();
@@ -139,7 +76,7 @@ function Landing() {
               <span className="text-sm font-bold text-primary-deep">企業端</span>
             </div>
             <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-              查看哪些移工可能被收取不當費用、逐案審核、核定返還金額。
+              回應客戶稽核：六項對帳測試、逐案人工審核、核定返還，產出舉證包。
             </p>
             <div className="mt-4 flex gap-6 border-t border-border pt-4">
               <span>
@@ -184,55 +121,6 @@ function Landing() {
           </div>
         ))}
       </section>
-
-      <section id="demo-story" className="scroll-mt-24">
-        <div className="mb-6 border-t border-border pt-10">
-          <h2 className="text-xl font-bold text-primary-deep">完整流程</h2>
-          <p className="mt-1.5 text-sm text-muted-foreground">
-            九個步驟，從移工按下上傳，到第三方可以驗證。點擊任一步驟直接跳到對應畫面。
-          </p>
-        </div>
-        <ol className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {scenes.map((s) => (
-            <li key={s.no}>
-              <Link
-                to={s.to}
-                className="card-surface group flex h-full gap-4 p-6 transition-colors hover:border-border-strong hover:bg-muted"
-              >
-                <span className="num text-xs text-primary">{s.no}</span>
-                <span className="min-w-0">
-                  <span className="block text-sm font-bold text-primary-deep">{s.title}</span>
-                  <span className="mt-1.5 block text-xs leading-relaxed text-muted-foreground">
-                    {s.body}
-                  </span>
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ol>
-      </section>
-
-      <section className="rounded-lg bg-primary-deep px-10 py-12 text-white">
-        <h2 className="text-2xl leading-relaxed font-bold">
-          不只是聲稱合規。
-          <br />
-          而是證明合規。
-        </h2>
-        <div className="mt-8 grid gap-6 border-t border-white/15 pt-8 md:grid-cols-3">
-          {closing.map((c) => (
-            <div key={c.title}>
-              <div className="text-sm font-semibold tracking-wide text-white/85">{c.title}</div>
-              <p className="mt-1 text-sm text-white/65">{c.body}</p>
-            </div>
-          ))}
-        </div>
-        <div className="mt-10 border-t border-white/15 pt-6">
-          <div className="text-lg font-bold">TrustRBA</div>
-          <div className="text-sm text-white/60">From AI Decisions to Verifiable Trust.</div>
-        </div>
-      </section>
-
-      <WorkflowNav current="/" />
     </div>
   );
 }

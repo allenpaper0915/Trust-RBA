@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1800 700" width="1800" height="700" font-family="'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif">
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#9AAAC4"/>
+    </marker>
+  </defs>
+
+  <rect id="bg" x="-40" y="-40" width="1880" height="780" fill="#FFFFFF"/>
+
+  <!-- ============ 左：三方資料進來 ============ -->
+  <text x="0" y="22" font-size="19" font-weight="700" fill="#2F5C98" letter-spacing="2">三方資料進來</text>
+
+  <rect x="0" y="46" width="400" height="182" rx="10" fill="#F4F7FC" stroke="#D6E0EF"/>
+  <rect x="0" y="46" width="5" height="182" rx="2.5" fill="#2F5C98"/>
+  <text x="26" y="86" font-size="27" font-weight="700" fill="#101E33">移工</text>
+  <text x="26" y="122" font-size="19" fill="#2E3E58">費用明細・收據・匯款單</text>
+  <text x="26" y="152" font-size="19" fill="#2E3E58">四種語言・免帳號・匿名</text>
+  <rect x="26" y="172" width="250" height="34" rx="17" fill="#E4EEE9"/>
+  <text x="42" y="195" font-size="17" fill="#1E5740">送出前自動去識別化</text>
+
+  <rect x="0" y="256" width="400" height="182" rx="10" fill="#F4F7FC" stroke="#D6E0EF"/>
+  <rect x="0" y="256" width="5" height="182" rx="2.5" fill="#B5852E"/>
+  <text x="26" y="296" font-size="27" font-weight="700" fill="#101E33">中間商</text>
+  <text x="26" y="330" font-size="17" fill="#4A5A74">台灣仲介（美加人力）・來源國仲介</text>
+  <text x="26" y="356" font-size="17" fill="#4A5A74">訓練中心・體檢・機票代辦</text>
+  <text x="26" y="392" font-size="19" fill="#2E3E58">逐人費用明細・收款帳戶入帳</text>
+  <rect x="26" y="406" width="230" height="30" rx="15" fill="#F7EEDA"/>
+  <text x="42" y="427" font-size="16" fill="#6E4F0C">合約須載明查核權</text>
+
+  <rect x="0" y="466" width="400" height="182" rx="10" fill="#F4F7FC" stroke="#D6E0EF"/>
+  <rect x="0" y="466" width="5" height="182" rx="2.5" fill="#2F5C98"/>
+  <text x="26" y="506" font-size="27" font-weight="700" fill="#101E33">供應商（雇主）</text>
+  <text x="26" y="542" font-size="19" fill="#2E3E58">付給仲介的發票與匯款憑證</text>
+  <text x="26" y="572" font-size="19" fill="#2E3E58">薪資帳戶無扣款查核</text>
+  <rect x="26" y="592" width="290" height="34" rx="17" fill="#EAF0FA"/>
+  <text x="42" y="615" font-size="17" fill="#1F4A82">內部帳務，立即可得</text>
+
+  <line x1="404" y1="347" x2="462" y2="347" stroke="#9AAAC4" stroke-width="2.5" marker-end="url(#ar)"/>
+
+  <!-- ============ 中：六項對帳測試 ============ -->
+  <rect x="472" y="112" width="386" height="470" rx="12" fill="#FFFFFF" stroke="#2F5C98" stroke-width="2.5"/>
+  <text x="502" y="158" font-size="30" font-weight="700" fill="#101E33">六項對帳測試</text>
+  <text x="502" y="192" font-size="18" fill="#2E3E58">檢驗七種可能被收費的路徑</text>
+  <line x1="502" y1="214" x2="828" y2="214" stroke="#E3E9F3" stroke-width="1.5"/>
+
+  <text x="502" y="252" font-size="19" fill="#101E33">T1　成本缺口</text>
+  <text x="502" y="294" font-size="19" fill="#101E33">T2　三方金額對帳</text>
+  <text x="502" y="336" font-size="19" fill="#101E33">T3　移工金流流出</text>
+  <text x="502" y="378" font-size="19" fill="#101E33">T4　薪資扣款查核</text>
+  <text x="502" y="420" font-size="19" fill="#101E33">T5　仲介入帳查核</text>
+  <text x="502" y="462" font-size="19" fill="#101E33">T6　訪談一致性</text>
+
+  <line x1="502" y1="492" x2="828" y2="492" stroke="#E3E9F3" stroke-width="1.5"/>
+  <text x="502" y="526" font-size="17" fill="#2E3E58">任一項未通過，該走廊就不得宣稱已舉證</text>
+
+  <line x1="862" y1="347" x2="920" y2="347" stroke="#9AAAC4" stroke-width="2.5" marker-end="url(#ar)"/>
+
+  <!-- ============ 人工審核 ============ -->
+  <rect x="930" y="227" width="290" height="240" rx="12" fill="#FFFFFF" stroke="#2F5C98" stroke-width="2.5"/>
+  <text x="958" y="277" font-size="30" font-weight="700" fill="#101E33">人工審核</text>
+  <text x="958" y="315" font-size="18" fill="#2E3E58">合規人員做決定</text>
+  <line x1="958" y1="337" x2="1192" y2="337" stroke="#E3E9F3" stroke-width="1.5"/>
+  <text x="958" y="371" font-size="18" fill="#101E33">確認不當收費</text>
+  <text x="958" y="403" font-size="18" fill="#101E33">核定返還金額</text>
+  <text x="958" y="435" font-size="18" fill="#101E33">回覆移工</text>
+
+  <line x1="1224" y1="347" x2="1282" y2="347" stroke="#9AAAC4" stroke-width="2.5" marker-end="url(#ar)"/>
+
+  <!-- ============ 右：舉證包 → 品牌客戶 ============ -->
+  <rect x="1292" y="112" width="400" height="225" rx="12" fill="#2F5C98"/>
+  <text x="1320" y="162" font-size="30" font-weight="700" fill="#FFFFFF">舉證包</text>
+  <text x="1320" y="194" font-size="18" fill="#D6E5F6">回覆品牌客戶稽核的正式文件</text>
+  <line x1="1320" y1="214" x2="1664" y2="214" stroke="#4C77AC" stroke-width="1.5"/>
+  <text x="1320" y="248" font-size="18" fill="#F2F7FD">舉證覆蓋率・六項測試結果</text>
+  <text x="1320" y="278" font-size="18" fill="#F2F7FD">不符合事項與矯正期限</text>
+  <text x="1320" y="312" font-size="17" fill="#C6DCF2">證不出來的部分寫在正面</text>
+
+  <line x1="1492" y1="341" x2="1492" y2="385" stroke="#9AAAC4" stroke-width="2.5" marker-end="url(#ar)"/>
+
+  <rect x="1292" y="395" width="400" height="193" rx="12" fill="#FFFFFF" stroke="#3EA079" stroke-width="2.5"/>
+  <text x="1320" y="445" font-size="30" font-weight="700" fill="#101E33">品牌客戶驗證</text>
+  <text x="1320" y="481" font-size="18" fill="#2E3E58">Apple・Dell・第三方稽核</text>
+  <line x1="1320" y1="503" x2="1664" y2="503" stroke="#E3E9F3" stroke-width="1.5"/>
+  <text x="1320" y="535" font-size="18" fill="#1E5740">用公鑰自己驗，不必相信我們</text>
+  <text x="1320" y="563" font-size="18" fill="#1E5740">驗得了，卻看不到移工是誰</text>
+
+  <text x="900" y="682" font-size="21" font-weight="700" fill="#101E33" text-anchor="middle">從「我們沒接到申訴」，變成「這是證據，你自己驗」。</text>
+</svg>

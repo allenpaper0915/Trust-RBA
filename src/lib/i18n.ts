@@ -146,6 +146,14 @@ const zh: Dict = {
   "doc.message": "通訊紀錄",
   "doc.other": "其他文件",
   "res.identityOk": "身分已核驗（企業看不到你的證件）",
+  "fee.method": "怎麼付的",
+  "fee.traceHint": "轉帳與薪資扣款會留下紀錄，是最有力的證據。",
+  "fee.cashHint": "現金沒有金流紀錄，請盡量保留收據或對話截圖。",
+  "pay.bank": "銀行匯款／轉帳",
+  "pay.payroll": "從薪水裡扣",
+  "pay.cash": "現金",
+  "res.traceable": "可追查的金流",
+  "res.untraceable": "現金・無金流紀錄",
 };
 
 const vi: Dict = {
@@ -287,6 +295,14 @@ const vi: Dict = {
   "doc.message": "Tin nhắn trao đổi",
   "doc.other": "Tài liệu khác",
   "res.identityOk": "Đã xác minh danh tính (công ty không thấy giấy tờ của bạn)",
+  "fee.method": "Bạn đã trả bằng cách nào",
+  "fee.traceHint": "Chuyển khoản và trừ lương đều để lại dấu vết — đây là bằng chứng mạnh nhất.",
+  "fee.cashHint": "Tiền mặt không để lại dấu vết. Hãy cố giữ biên lai hoặc ảnh chụp tin nhắn.",
+  "pay.bank": "Chuyển khoản ngân hàng",
+  "pay.payroll": "Trừ vào lương",
+  "pay.cash": "Tiền mặt",
+  "res.traceable": "Dòng tiền tra được",
+  "res.untraceable": "Tiền mặt · không có dấu vết",
 };
 
 const id: Dict = {
@@ -428,6 +444,15 @@ const id: Dict = {
   "doc.message": "Riwayat percakapan",
   "doc.other": "Dokumen lain",
   "res.identityOk": "Identitas terverifikasi (perusahaan tidak melihat dokumen Anda)",
+  "fee.method": "Cara Anda membayar",
+  "fee.traceHint": "Transfer dan potong gaji meninggalkan jejak — ini bukti terkuat.",
+  "fee.cashHint":
+    "Tunai tidak meninggalkan jejak. Usahakan simpan kuitansi atau tangkapan layar percakapan.",
+  "pay.bank": "Transfer bank",
+  "pay.payroll": "Potong gaji",
+  "pay.cash": "Tunai",
+  "res.traceable": "Aliran dana terlacak",
+  "res.untraceable": "Tunai · tanpa jejak",
 };
 
 const en: Dict = {
@@ -571,6 +596,14 @@ const en: Dict = {
   "doc.message": "Message history",
   "doc.other": "Other document",
   "res.identityOk": "Identity verified (the employer never sees your document)",
+  "fee.method": "How you paid",
+  "fee.traceHint": "Transfers and payroll deductions leave a record — the strongest kind of proof.",
+  "fee.cashHint": "Cash leaves no trail. Keep receipts or message screenshots if you can.",
+  "pay.bank": "Bank transfer",
+  "pay.payroll": "Deducted from wages",
+  "pay.cash": "Cash",
+  "res.traceable": "Traceable payments",
+  "res.untraceable": "Cash · no trail",
 };
 
 const dicts: Record<Locale, Dict> = { zh, vi, id, en };

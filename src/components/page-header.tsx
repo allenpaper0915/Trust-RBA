@@ -1,8 +1,5 @@
-import { Link } from "@tanstack/react-router";
-import { ArrowLeft, ArrowRight } from "lucide-react";
 import type { ReactNode } from "react";
 
-import { workflowSteps } from "@/data/compliance";
 import { cn } from "@/lib/utils";
 
 export function PageHeader({
@@ -29,49 +26,6 @@ export function PageHeader({
       </div>
       {aside}
     </div>
-  );
-}
-
-/** 主流程的上一步／下一步導引。 */
-export function WorkflowNav({ current }: { current: string }) {
-  const i = workflowSteps.findIndex((s) => s.to === current);
-  if (i < 0) return null;
-  const prev = i > 0 ? workflowSteps[i - 1] : undefined;
-  const next = i < workflowSteps.length - 1 ? workflowSteps[i + 1] : undefined;
-
-  return (
-    <nav className="flex flex-wrap items-stretch justify-between gap-4 border-t border-border pt-8">
-      {prev ? (
-        <Link
-          to={prev.to}
-          className="group flex min-w-[240px] flex-1 items-center gap-3 rounded-lg border border-border bg-card px-5 py-4 transition-colors hover:border-border-strong hover:bg-muted"
-        >
-          <ArrowLeft className="size-4 shrink-0 text-muted-foreground" />
-          <span className="text-left">
-            <span className="block text-[11px] tracking-wider text-muted-foreground">上一步</span>
-            <span className="block text-sm font-medium text-primary-deep">{prev.caption}</span>
-          </span>
-        </Link>
-      ) : (
-        <span className="flex-1" />
-      )}
-      {next && (
-        <Link
-          to={next.to}
-          className="group flex min-w-[240px] flex-1 items-center justify-end gap-3 rounded-lg border border-primary/25 bg-primary-soft px-5 py-4 transition-colors hover:bg-primary hover:text-primary-foreground"
-        >
-          <span className="text-right">
-            <span className="block text-[11px] tracking-wider text-primary/70 group-hover:text-primary-foreground/70">
-              下一步 · {next.title}
-            </span>
-            <span className="block text-sm font-medium text-primary group-hover:text-primary-foreground">
-              {next.caption}
-            </span>
-          </span>
-          <ArrowRight className="size-4 shrink-0 text-primary group-hover:text-primary-foreground" />
-        </Link>
-      )}
-    </nav>
   );
 }
 

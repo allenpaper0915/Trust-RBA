@@ -39,7 +39,7 @@ export const paymentMethods = [
   "現金 + 薪資扣款",
 ];
 
-/** 取得該移工走廊的基準招聘費（新台幣）。 */
+/** 取得該來源國的基準招聘費（新台幣）。 */
 export function benchmarkFor(origin: string): number {
   const row = benchmark.corridors.find((c) => c.corridor.startsWith(origin));
   return row?.benchmark ?? benchmark.benchmarkFee;
@@ -156,7 +156,7 @@ export type AnalysisResult = {
   /** 費用鏈加總後的實付金額（新台幣） */
   paid: number;
   chain: FeeChainResult;
-  /** 該走廊的基準 */
+  /** 該來源國的基準 */
   benchmark: number;
   /** 高於基準的百分比，低於基準則為 0 */
   deltaPercent: number;

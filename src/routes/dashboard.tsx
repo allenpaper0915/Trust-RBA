@@ -1,15 +1,17 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo } from "react";
-import { ArrowRight, Info, Users } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
 import { benchmark, enterprise, money } from "@/data/compliance";
 import { statusMeta } from "@/data/cases";
 import { assessCase } from "@/lib/risk-engine";
 import { assessFeeChain, benchmarkFor } from "@/lib/analysis";
 import { vendorStats, vendorStatusMeta } from "@/lib/vendor-stats";
+import { coverage } from "@/lib/assurance";
+import { buildPack, daysUntil } from "@/lib/evidence-pack";
+import { buyer, commercialStakes, ncMeta } from "@/data/buyer";
 import { usePlatform } from "@/components/platform-store";
-import { SectionHeading, StatusPill } from "@/components/status-pill";
-import { WorkflowNav } from "@/components/page-header";
+import { StatusPill } from "@/components/status-pill";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/dashboard")({
@@ -19,10 +21,10 @@ export const Route = createFileRoute("/dashboard")({
       {
         name: "description",
         content:
-          "ABC Electronics 的 RBA 移工招聘合規總覽：審核佇列、移工自主申報、仲介風險排行與全球招聘費基準比較。",
+          "ABC Electronics 的 RBA 移工招聘合規總覽：客戶稽核請求、舉證覆蓋率、審核佇列與中間商風險排行。",
       },
       { property: "og:title", content: "合規總覽｜TrustRBA" },
-      { property: "og:description", content: "待審案件、確認超收金額與仲介風險，一頁掌握。" },
+      { property: "og:description", content: "舉證覆蓋率、待審案件與中間商風險，一頁掌握。" },
     ],
   }),
   component: Dashboard,
@@ -37,16 +39,13 @@ function Dashboard() {
     const refundTotal = confirmed.reduce((s, c) => s + (c.review?.refund ?? 0), 0);
     const outstanding = cases.filter((c) => c.state === "confirmed").length;
     const workerCases = cases.filter((c) => c.source === "worker");
-    // 合規分數：以未結案的高風險比例扣分，讓分數會隨審核動作變動。
-    const openHigh = cases.filter(
-      (c) => assessCase(c).riskScore >= 60 && !["dismissed", "remediated"].includes(c.state),
-    ).length;
-    const score = Math.max(40, 100 - openHigh * 4);
+    // 舉證覆蓋率取代「合規分數」：RBA 看的是能證明多少，不是有多少人申訴。
+    const cov = coverage(cases);
     // RBA 的核心指標：不該由移工負擔、卻由移工付掉的錢總共有多少。
     const disallowed = cases
       .filter((c) => c.state !== "dismissed")
       .reduce((s, c) => s + assessFeeChain(c.feeItems).disallowed, 0);
-    return { pending, confirmed, refundTotal, outstanding, workerCases, score, disallowed };
+    return { pending, confirmed, refundTotal, outstanding, workerCases, cov, disallowed };
   }, [cases]);
 
   /** 中間商風險排行：把散落的案件收斂成「該找哪一家談」。 */
@@ -64,42 +63,96 @@ function Dashboard() {
   );
 
   const maxValue = Math.max(...benchmark.corridors.map((c) => c.enterprise));
+  // 客戶稽核請求：這才是企業非做不可的理由。
+  const pack = useMemo(() => buildPack(cases), [cases]);
+  const remaining = daysUntil(buyer.dueDate);
+  const nc = ncMeta[pack.level];
 
   return (
     <div className="space-y-12">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-primary-deep">合規總覽</h1>
-          <p className="mt-1 text-sm text-muted-foreground">{enterprise.name} · RBA 移工招聘合規</p>
-        </div>
-        <Link
-          to="/cases"
-          className="inline-flex items-center gap-2 rounded-md bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-deep"
-        >
-          進入審核佇列 <ArrowRight className="size-4" />
-        </Link>
+      <div>
+        <h1 className="text-2xl font-bold text-primary-deep">合規總覽</h1>
+        <p className="mt-1 text-sm text-muted-foreground">{enterprise.name} · RBA 移工招聘合規</p>
       </div>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+      {/* 客戶稽核請求：先講後果，再講數字 */}
+      <section
+        className={cn(
+          "rounded-lg border p-7",
+          nc.tone === "danger"
+            ? "border-danger/30 bg-danger-soft"
+            : nc.tone === "warning"
+              ? "border-warning/35 bg-warning-soft"
+              : "border-success/30 bg-success-soft",
+        )}
+      >
+        <div className="flex flex-wrap items-start justify-between gap-6">
+          <div className="max-w-3xl">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <StatusPill tone={nc.tone}>{nc.label}</StatusPill>
+              <span className="num text-xs text-muted-foreground">
+                {buyer.program} · {buyer.requestId}
+              </span>
+            </div>
+            <h2 className="mt-3 text-xl font-bold text-primary-deep">
+              {buyer.name} 要求提出「未向移工收取招聘費」的證據
+            </h2>
+            <p className="mt-2.5 text-sm leading-relaxed text-muted-foreground">{nc.consequence}</p>
+          </div>
+
+          <div className="flex flex-wrap gap-6">
+            <div>
+              <div className="text-xs text-muted-foreground">回覆期限</div>
+              <div className="num mt-1 text-2xl text-primary-deep">{remaining} 天</div>
+              <div className="text-[11px] text-muted-foreground">{buyer.due}</div>
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground">受影響年度訂單</div>
+              <div className="num mt-1 text-2xl text-danger">
+                {money(commercialStakes.annualOrders)}
+              </div>
+              <div className="text-[11px] text-muted-foreground">
+                占營收 {Math.round(commercialStakes.shareOfRevenue * 100)}%
+              </div>
+            </div>
+            <Link
+              to="/assurance"
+              className="inline-flex h-fit items-center gap-2 rounded-md bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-deep"
+            >
+              查看舉證覆蓋 <ArrowRight className="size-4" />
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <div className="card-surface p-6">
-          <div className="text-sm text-muted-foreground">合規分數</div>
+          <div className="text-sm text-muted-foreground">舉證覆蓋率</div>
           <div className="mt-2 flex items-baseline gap-1">
-            <span className="num text-4xl text-primary-deep">{stats.score}</span>
-            <span className="text-sm text-muted-foreground">/ 100</span>
+            <span className="num text-4xl text-primary-deep">
+              {Math.round(stats.cov.rate * 100)}
+            </span>
+            <span className="text-sm text-muted-foreground">%</span>
           </div>
           <div className="mt-3 h-1.5 w-full rounded-full bg-muted">
             <div
-              className={cn("h-1.5 rounded-full", stats.score >= 85 ? "bg-success" : "bg-warning")}
-              style={{ width: `${stats.score}%` }}
+              className={cn(
+                "h-1.5 rounded-full",
+                stats.cov.rate >= 0.9 ? "bg-success" : "bg-warning",
+              )}
+              style={{ width: `${Math.round(stats.cov.rate * 100)}%` }}
             />
           </div>
-          <div className="mt-4">
-            <StatusPill tone={stats.score >= 85 ? "success" : "warning"}>
-              {stats.score >= 85 ? "狀態良好" : "需要注意"}
-            </StatusPill>
-          </div>
-          <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">
-            未結案的高風險案件每件扣 4 分，結案後自動回補。
+          <Link to="/assurance" className="mt-4 inline-block text-xs text-primary hover:underline">
+            {stats.cov.proven} / {stats.cov.workers} 名已證明未收費 →
+          </Link>
+        </div>
+
+        <div className="card-surface border-warning/35 p-6">
+          <div className="text-sm text-muted-foreground">拿不出證據</div>
+          <div className="num mt-2 text-4xl text-warning-foreground">{stats.cov.unproven}</div>
+          <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
+            其中 {stats.cov.cash} 名以現金支付，金流本身沒有軌跡。
           </p>
         </div>
 
@@ -109,25 +162,6 @@ function Dashboard() {
           <Link to="/cases" className="mt-4 inline-block text-xs text-primary hover:underline">
             開始審核 →
           </Link>
-        </div>
-
-        <div className="card-surface p-6">
-          <div className="text-sm text-muted-foreground">移工自主申報</div>
-          <div className="num mt-2 text-4xl text-primary-deep">{stats.workerCases.length}</div>
-          <Link
-            to="/worker"
-            className="mt-4 inline-flex items-center gap-1 text-xs text-primary hover:underline"
-          >
-            <Users className="size-3" /> 查看移工端 →
-          </Link>
-        </div>
-
-        <div className="card-surface border-danger/25 p-6">
-          <div className="text-sm text-muted-foreground">已確認不當收費</div>
-          <div className="num mt-2 text-4xl text-danger">{stats.confirmed.length}</div>
-          <div className="mt-2 text-xs text-muted-foreground">
-            其中 {stats.outstanding} 件尚未完成返還
-          </div>
         </div>
 
         <div className="card-surface border-danger/25 p-6">
@@ -234,91 +268,6 @@ function Dashboard() {
           </ul>
         </div>
       </section>
-
-      <section>
-        <SectionHeading
-          title="全球招聘費基準"
-          subtitle={`參考 ${benchmark.sources}`}
-          aside={
-            <StatusPill tone="primary" dot={false}>
-              Real-world Benchmark
-            </StatusPill>
-          }
-        />
-        <div className="card-surface p-8">
-          <p className="max-w-3xl text-sm leading-loose text-muted-foreground">
-            TrustRBA 使用公開的全球移工招聘成本資料，建立 Migration Cost
-            Benchmark，做為每一件申報的比較基準。
-          </p>
-
-          <div className="mt-8 grid gap-10 lg:grid-cols-[1.3fr_0.7fr]">
-            <div className="space-y-6">
-              {benchmark.corridors.map((c) => {
-                const flagged = c.corridor === benchmark.corridor;
-                return (
-                  <div key={c.corridor}>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="font-medium text-primary-deep">{c.corridor}</span>
-                      <span className="text-xs text-muted-foreground">
-                        企業 {money(c.enterprise)}／基準 {money(c.benchmark)}
-                      </span>
-                    </div>
-                    <div className="mt-2 space-y-1.5">
-                      <div className="flex items-center gap-3">
-                        <span className="w-16 text-[11px] text-muted-foreground">企業資料</span>
-                        <div className="h-3 flex-1 rounded bg-muted">
-                          <div
-                            className={flagged ? "h-3 rounded bg-danger" : "h-3 rounded bg-primary"}
-                            style={{ width: `${(c.enterprise / maxValue) * 100}%` }}
-                          />
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className="w-16 text-[11px] text-muted-foreground">Benchmark</span>
-                        <div className="h-3 flex-1 rounded bg-muted">
-                          <div
-                            className="h-3 rounded bg-primary-deep/35"
-                            style={{ width: `${(c.benchmark / maxValue) * 100}%` }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="rounded-lg border border-border bg-secondary p-6">
-              <div className="text-sm font-medium text-primary-deep">{benchmark.corridor}</div>
-              <dl className="mt-4 space-y-3 text-sm">
-                <div className="flex justify-between">
-                  <dt className="text-muted-foreground">企業資料</dt>
-                  <dd className="num text-primary-deep">{money(benchmark.enterpriseFee)}</dd>
-                </div>
-                <div className="flex justify-between">
-                  <dt className="text-muted-foreground">Benchmark</dt>
-                  <dd className="num text-primary-deep">{money(benchmark.benchmarkFee)}</dd>
-                </div>
-                <div className="flex justify-between border-t border-border pt-3">
-                  <dt className="text-muted-foreground">差異</dt>
-                  <dd className="num text-danger">+{benchmark.deltaPercent}%</dd>
-                </div>
-              </dl>
-              <div className="mt-3 text-xs text-muted-foreground">高於歷史基準</div>
-              <div className="mt-4">
-                <StatusPill tone="warning">風險訊號</StatusPill>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-8 flex items-start gap-2 rounded-md border border-border bg-muted px-4 py-3 text-sm text-muted-foreground">
-            <Info className="mt-0.5 size-4 shrink-0 text-primary" />
-            {benchmark.disclaimer}
-          </div>
-        </div>
-      </section>
-
-      <WorkflowNav current="/dashboard" />
     </div>
   );
 }

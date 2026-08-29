@@ -5,7 +5,7 @@ import { ArrowRight, Check, Loader2, Play, RotateCcw, ShieldAlert } from "lucide
 import { enterprise, sourceLabel, verificationLog, verificationStages } from "@/data/compliance";
 import { usePlatform } from "@/components/platform-store";
 import { assessCase, engineNote } from "@/lib/risk-engine";
-import { WorkflowNav, PageHeader } from "@/components/page-header";
+import { PageHeader } from "@/components/page-header";
 import { StatusPill } from "@/components/status-pill";
 import { useSession } from "@/components/session-state";
 import { cn } from "@/lib/utils";
@@ -302,8 +302,6 @@ function VerificationCenter() {
           </ul>
         </section>
       )}
-
-      <WorkflowNav current="/verification" />
     </div>
   );
 }

@@ -6,7 +6,7 @@ import { money } from "@/data/compliance";
 import { vendorTypeLabel, feeCategoryMeta } from "@/data/vendors";
 import { usePlatform } from "@/components/platform-store";
 import { vendorStats, vendorStatusMeta, type VendorStatus } from "@/lib/vendor-stats";
-import { PageHeader, WorkflowNav } from "@/components/page-header";
+import { PageHeader } from "@/components/page-header";
 import { StatusPill } from "@/components/status-pill";
 import { cn } from "@/lib/utils";
 
@@ -47,7 +47,7 @@ function VendorList() {
       <PageHeader
         eyebrow="VENDOR COMPLIANCE"
         title="中間商合規"
-        subtitle="招聘費被拆給好幾家中間商。依收款方聚合後，才看得出誰在系統性收費。"
+        subtitle="依收款方彙總所有案件的費用鏈"
         aside={<StatusPill tone="danger">{violations} 家確認違規</StatusPill>}
       />
 
@@ -168,13 +168,6 @@ function VendorList() {
           </tbody>
         </table>
       </section>
-
-      <p className="rounded-md border border-border bg-muted px-5 py-4 text-sm leading-relaxed text-muted-foreground">
-        狀態由案件審核結果推導，不是人工標註：有經人工確認的不當收費即為「確認違規」，
-        有未結案申報為「調查中」，申報中出現但不在合約名單上的公司為「名單外」。
-      </p>
-
-      <WorkflowNav current="/vendors" />
     </div>
   );
 }

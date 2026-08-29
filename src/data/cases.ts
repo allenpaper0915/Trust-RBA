@@ -19,7 +19,33 @@ export type CaseSource = "worker" | "audit";
 export type DocKind =
   "identity" | "offer" | "receipt" | "contract" | "payslip" | "transfer" | "message" | "other";
 
-/** 費用鏈的一筆付款：付給誰、為了什麼、有沒有憑證。 */
+/**
+ * 付款方式決定證據力。錢一定有軌跡——除非付的是現金。
+ * 轉帳與薪資扣款可以向銀行或薪資系統調閱，雙方都留下紀錄；
+ * 現金什麼都不留，所以「證明沒有發生」在現金上是做不到的。
+ */
+export type PayMethod = "bank" | "payroll" | "cash";
+
+export const payMethodMeta: Record<PayMethod, { label: string; traceable: boolean; note: string }> =
+  {
+    bank: {
+      label: "銀行匯款",
+      traceable: true,
+      note: "雙方都有紀錄，可向銀行調閱對帳。",
+    },
+    payroll: {
+      label: "薪資扣款",
+      traceable: true,
+      note: "企業自己的薪資系統就查得到，最容易取得的證據。",
+    },
+    cash: {
+      label: "現金",
+      traceable: false,
+      note: "沒有金流軌跡。只能靠收據與訪談，也無法用來證明「沒有發生」。",
+    },
+  };
+
+/** 費用鏈的一筆付款：付給誰、為了什麼、怎麼付的、有沒有憑證。 */
 export type FeeItem = {
   id: string;
   category: FeeCategory;
@@ -29,6 +55,7 @@ export type FeeItem = {
   vendorId?: string | undefined;
   /** 新台幣 */
   amount: number;
+  method: PayMethod;
   hasDocument: boolean;
 };
 
@@ -155,7 +182,7 @@ export const reviewers = [
 
 /**
  * 各案件的費用鏈。刻意讓每一筆單獨看都「不算離譜」，
- * 加總後才超出走廊基準——這是單一份仲介聲明查不出來的樣態。
+ * 加總後才超出該國基準——這是單一份仲介聲明查不出來的樣態。
  */
 const feeChains: Record<string, FeeItem[]> = {
   "2026-024": [
@@ -164,6 +191,7 @@ const feeChains: Record<string, FeeItem[]> = {
       category: "agency_service",
       payee: "ABC Recruitment Agency",
       vendorId: "V-ABC",
+      method: "bank",
       amount: 28000,
       hasDocument: true,
     },
@@ -172,6 +200,7 @@ const feeChains: Record<string, FeeItem[]> = {
       category: "agency_service",
       payee: "Nam Viet Manpower",
       vendorId: "V-NAMVIET",
+      method: "bank",
       amount: 15000,
       hasDocument: true,
     },
@@ -180,6 +209,7 @@ const feeChains: Record<string, FeeItem[]> = {
       category: "training",
       payee: "Viet Skill Training Center",
       vendorId: "V-VTRAIN",
+      method: "cash",
       amount: 9000,
       hasDocument: true,
     },
@@ -188,6 +218,7 @@ const feeChains: Record<string, FeeItem[]> = {
       category: "medical",
       payee: "Saigon Health Check",
       vendorId: "V-HEALTH",
+      method: "cash",
       amount: 3500,
       hasDocument: false,
     },
@@ -195,6 +226,7 @@ const feeChains: Record<string, FeeItem[]> = {
       id: "F-024-5",
       category: "airfare",
       payee: "Truong Travel",
+      method: "cash",
       amount: 3000,
       hasDocument: false,
     },
@@ -202,6 +234,7 @@ const feeChains: Record<string, FeeItem[]> = {
       id: "F-024-6",
       category: "document",
       payee: "越南外交部（護照規費）",
+      method: "bank",
       amount: 1500,
       hasDocument: true,
     },
@@ -212,6 +245,7 @@ const feeChains: Record<string, FeeItem[]> = {
       category: "agency_service",
       payee: "ABC Recruitment Agency",
       vendorId: "V-ABC",
+      method: "bank",
       amount: 25000,
       hasDocument: true,
     },
@@ -220,6 +254,7 @@ const feeChains: Record<string, FeeItem[]> = {
       category: "agency_service",
       payee: "Nam Viet Manpower",
       vendorId: "V-NAMVIET",
+      method: "bank",
       amount: 18000,
       hasDocument: true,
     },
@@ -228,6 +263,7 @@ const feeChains: Record<string, FeeItem[]> = {
       category: "training",
       payee: "Viet Skill Training Center",
       vendorId: "V-VTRAIN",
+      method: "bank",
       amount: 8000,
       hasDocument: true,
     },
@@ -236,6 +272,7 @@ const feeChains: Record<string, FeeItem[]> = {
       category: "medical",
       payee: "Saigon Health Check",
       vendorId: "V-HEALTH",
+      method: "cash",
       amount: 2500,
       hasDocument: false,
     },
@@ -243,6 +280,7 @@ const feeChains: Record<string, FeeItem[]> = {
       id: "F-031-5",
       category: "document",
       payee: "越南外交部（護照規費）",
+      method: "bank",
       amount: 1500,
       hasDocument: true,
     },
@@ -253,6 +291,7 @@ const feeChains: Record<string, FeeItem[]> = {
       category: "agency_service",
       payee: "Nam Viet Manpower",
       vendorId: "V-NAMVIET",
+      method: "cash",
       amount: 30000,
       hasDocument: true,
     },
@@ -261,6 +300,7 @@ const feeChains: Record<string, FeeItem[]> = {
       category: "training",
       payee: "Viet Skill Training Center",
       vendorId: "V-VTRAIN",
+      method: "cash",
       amount: 12000,
       hasDocument: false,
     },
@@ -269,6 +309,7 @@ const feeChains: Record<string, FeeItem[]> = {
       category: "medical",
       payee: "Saigon Health Check",
       vendorId: "V-HEALTH",
+      method: "cash",
       amount: 4000,
       hasDocument: false,
     },
@@ -276,6 +317,7 @@ const feeChains: Record<string, FeeItem[]> = {
       id: "F-047-4",
       category: "document",
       payee: "越南外交部（護照規費）",
+      method: "bank",
       amount: 2000,
       hasDocument: true,
     },
@@ -286,6 +328,7 @@ const feeChains: Record<string, FeeItem[]> = {
       category: "agency_service",
       payee: "Sentosa Placement",
       vendorId: "V-SENTOSA",
+      method: "payroll",
       amount: 24000,
       hasDocument: true,
     },
@@ -294,6 +337,7 @@ const feeChains: Record<string, FeeItem[]> = {
       category: "training",
       payee: "Sentosa Placement",
       vendorId: "V-SENTOSA",
+      method: "payroll",
       amount: 9000,
       hasDocument: false,
     },
@@ -302,6 +346,7 @@ const feeChains: Record<string, FeeItem[]> = {
       category: "medical",
       payee: "Sentosa Placement",
       vendorId: "V-SENTOSA",
+      method: "cash",
       amount: 3500,
       hasDocument: false,
     },
@@ -309,6 +354,7 @@ const feeChains: Record<string, FeeItem[]> = {
       id: "F-088-4",
       category: "document",
       payee: "印尼移民局（護照規費）",
+      method: "bank",
       amount: 1500,
       hasDocument: true,
     },
@@ -319,6 +365,7 @@ const feeChains: Record<string, FeeItem[]> = {
       category: "agency_service",
       payee: "ABC Recruitment Agency",
       vendorId: "V-ABC",
+      method: "cash",
       amount: 26000,
       hasDocument: false,
     },
@@ -327,6 +374,7 @@ const feeChains: Record<string, FeeItem[]> = {
       category: "agency_service",
       payee: "Nam Viet Manpower",
       vendorId: "V-NAMVIET",
+      method: "cash",
       amount: 12000,
       hasDocument: false,
     },
@@ -335,6 +383,7 @@ const feeChains: Record<string, FeeItem[]> = {
       category: "training",
       payee: "Viet Skill Training Center",
       vendorId: "V-VTRAIN",
+      method: "bank",
       amount: 5000,
       hasDocument: true,
     },
@@ -342,6 +391,7 @@ const feeChains: Record<string, FeeItem[]> = {
       id: "F-119-4",
       category: "document",
       payee: "越南外交部（護照規費）",
+      method: "bank",
       amount: 2000,
       hasDocument: true,
     },
@@ -351,6 +401,7 @@ const feeChains: Record<string, FeeItem[]> = {
       id: "F-006-1",
       category: "document",
       payee: "菲律賓外交部（護照規費）",
+      method: "bank",
       amount: 1800,
       hasDocument: true,
     },
@@ -358,6 +409,7 @@ const feeChains: Record<string, FeeItem[]> = {
       id: "F-006-2",
       category: "document",
       payee: "駐台北馬尼拉經濟文化辦事處（簽證規費）",
+      method: "bank",
       amount: 2500,
       hasDocument: true,
     },
@@ -368,6 +420,7 @@ const feeChains: Record<string, FeeItem[]> = {
       category: "agency_service",
       payee: "Sentosa Placement",
       vendorId: "V-SENTOSA",
+      method: "bank",
       amount: 30000,
       hasDocument: true,
     },
@@ -376,6 +429,7 @@ const feeChains: Record<string, FeeItem[]> = {
       category: "training",
       payee: "Sentosa Placement",
       vendorId: "V-SENTOSA",
+      method: "bank",
       amount: 14000,
       hasDocument: true,
     },
@@ -384,6 +438,7 @@ const feeChains: Record<string, FeeItem[]> = {
       category: "medical",
       payee: "Sentosa Placement",
       vendorId: "V-SENTOSA",
+      method: "payroll",
       amount: 5000,
       hasDocument: true,
     },
@@ -391,6 +446,7 @@ const feeChains: Record<string, FeeItem[]> = {
       id: "F-012-4",
       category: "document",
       payee: "印尼移民局（護照規費）",
+      method: "bank",
       amount: 3000,
       hasDocument: true,
     },

@@ -1,8 +1,8 @@
 import { Link } from "@tanstack/react-router";
-import { AlertTriangle, Check, FileWarning, ShieldAlert } from "lucide-react";
+import { AlertTriangle, Banknote, Check, FileWarning, ShieldAlert } from "lucide-react";
 
 import { money } from "@/data/compliance";
-import type { FeeItem } from "@/data/cases";
+import { payMethodMeta, type FeeItem } from "@/data/cases";
 import { feeCategoryMeta, type FeeCategory } from "@/data/vendors";
 import { assessFeeChain } from "@/lib/analysis";
 import { cn } from "@/lib/utils";
@@ -15,6 +15,7 @@ type Text = {
   notAllowed: string;
   allowed: string;
   noDocument: string;
+  cash: string;
   total: string;
   disallowedTotal: string;
   unregistered: string;
@@ -29,6 +30,7 @@ const zh: Text = {
   notAllowed: "不得由移工負擔",
   allowed: "可由移工負擔",
   noDocument: "無憑證",
+  cash: "現金・無金流軌跡",
   total: "移工實付總額",
   disallowedTotal: "不該由移工負擔的金額",
   unregistered: "名單外中間商",
@@ -110,6 +112,11 @@ export function FeeChain({
                   )}
                   {meta.workerPayable ? t.allowed : t.notAllowed}
                 </span>
+                {!payMethodMeta[item.method].traceable && (
+                  <span className="inline-flex items-center gap-1 rounded border border-warning/35 bg-warning-soft px-1.5 py-0.5 text-warning-foreground">
+                    <Banknote className="size-3" /> {t.cash}
+                  </span>
+                )}
                 {!item.hasDocument && (
                   <span className="inline-flex items-center gap-1 rounded border border-warning/35 bg-warning-soft px-1.5 py-0.5 text-warning-foreground">
                     <FileWarning className="size-3" /> {t.noDocument}

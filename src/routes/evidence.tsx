@@ -4,7 +4,7 @@ import { AlertTriangle, ArrowRight } from "lucide-react";
 
 import { evidenceChain, money, primaryCase } from "@/data/compliance";
 import { assessCase } from "@/lib/risk-engine";
-import { WorkflowNav, PageHeader, SourceTag } from "@/components/page-header";
+import { PageHeader, SourceTag } from "@/components/page-header";
 import { ChainArrow, EvidenceChainStep, EvidenceDetail } from "@/components/evidence";
 import { StatusPill } from "@/components/status-pill";
 import { cn } from "@/lib/utils";
@@ -202,8 +202,6 @@ function EvidencePage() {
           只確認「仲介聲明與獨立證據不一致」這個事實，是否構成違規由人工合規人員認定。
         </p>
       </section>
-
-      <WorkflowNav current="/evidence" />
     </div>
   );
 }

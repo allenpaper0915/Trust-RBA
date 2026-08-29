@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1800 725" width="1800" height="725" font-family="'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif">
+  <rect x="-40" y="-40" width="1880" height="810" fill="#FFFFFF"/>
+
+  <text x="0" y="26" font-size="21" fill="#2E3E58">影響結論的計算全部是固定規則，可重現、可被稽核員重跑。</text>
+
+  <!-- ① 判斷邏輯 -->
+  <rect x="0" y="56" width="573" height="380" rx="14" fill="#FFFFFF" stroke="#D6E0EF" stroke-width="1.5"/>
+  <rect x="34" y="88" width="46" height="4" rx="2" fill="#1F4A82"/>
+  <text x="34" y="140" font-size="29" font-weight="700" fill="#101E33">判斷邏輯</text>
+  <text x="34" y="170" font-size="16" fill="#4A5A74">固定規則，不由模型產生</text>
+
+  <text x="34" y="228" font-size="22" fill="#101E33">去識別化</text>
+  <text x="34" y="272" font-size="22" fill="#101E33">RBA 判定</text>
+  <text x="34" y="316" font-size="22" fill="#101E33">六項對帳測試</text>
+  <text x="34" y="360" font-size="22" fill="#101E33">舉證覆蓋率</text>
+  <text x="34" y="404" font-size="22" fill="#101E33">風險計分</text>
+
+  <text x="0" y="470" font-size="17" fill="#1F4A82">重算一百次，結果完全一樣。</text>
+
+  <!-- ② 密碼學 -->
+  <rect x="613" y="56" width="573" height="380" rx="14" fill="#FFFFFF" stroke="#D6E0EF" stroke-width="1.5"/>
+  <rect x="647" y="88" width="46" height="4" rx="2" fill="#1E5740"/>
+  <text x="647" y="140" font-size="29" font-weight="700" fill="#101E33">密碼學</text>
+  <text x="647" y="170" font-size="16" fill="#4A5A74">第三方離線就能驗</text>
+
+  <text x="647" y="228" font-size="22" fill="#101E33">雜湊鏈</text>
+  <text x="647" y="254" font-size="16" fill="#4A5A74">紀錄事後改不動</text>
+  <text x="647" y="300" font-size="22" fill="#101E33">包含證明</text>
+  <text x="647" y="326" font-size="16" fill="#4A5A74">驗得了單筆，看不到其他人</text>
+  <text x="647" y="372" font-size="22" fill="#101E33">數位簽章</text>
+  <text x="647" y="398" font-size="16" fill="#4A5A74">改一個數字就驗不過</text>
+
+  <text x="613" y="470" font-size="17" fill="#1E5740">選擇性揭露，非零知識證明。</text>
+
+  <!-- ③ AI 負責 -->
+  <rect x="1226" y="56" width="574" height="380" rx="14" fill="#F7F9FC" stroke="#D6E0EF" stroke-width="1.5"/>
+  <rect x="1260" y="88" width="46" height="4" rx="2" fill="#8A96AB"/>
+  <text x="1260" y="140" font-size="29" font-weight="700" fill="#101E33">AI 負責</text>
+  <text x="1260" y="170" font-size="16" fill="#4A5A74">可容錯，不影響結論</text>
+
+  <text x="1260" y="228" font-size="22" fill="#2E3E58">讀懂文件欄位</text>
+  <text x="1260" y="272" font-size="22" fill="#2E3E58">多語翻譯</text>
+  <text x="1260" y="316" font-size="22" fill="#2E3E58">收款方名稱比對</text>
+  <text x="1260" y="360" font-size="22" fill="#2E3E58">寫成判斷理由</text>
+
+  <text x="1226" y="470" font-size="17" fill="#4A5A74">錯了人看得出來，結論不受影響。</text>
+
+  <!-- 規範依據 -->
+  <rect x="0" y="506" width="880" height="176" rx="14" fill="#F4F7FC"/>
+  <text x="34" y="548" font-size="21" font-weight="700" fill="#101E33">規範依據</text>
+  <text x="34" y="584" font-size="15" fill="#2E3E58">RBA Code of Conduct A1　Employer Pays Principle</text>
+  <text x="34" y="610" font-size="15" fill="#2E3E58">RBA VAP　不符合事項分級　・　IHRB Dhaka Principles 第 1 條</text>
+  <text x="34" y="636" font-size="15" fill="#2E3E58">ILO C181 第 7 條・公平招聘指引・強迫勞動指標（債務約束）</text>
+  <text x="34" y="662" font-size="15" fill="#2E3E58">KNOMAD 招聘成本調查（SDG 10.7.1）　・　美國關稅法第 307 條</text>
+
+  <!-- 資料聲明 -->
+  <rect x="920" y="506" width="880" height="176" rx="14" fill="#FFFFFF" stroke="#B9CDE8" stroke-width="1.5"/>
+  <text x="954" y="548" font-size="21" font-weight="700" fill="#101E33">資料聲明</text>
+  <text x="954" y="584" font-size="15" font-weight="700" fill="#101E33">規範與條款<tspan font-weight="400" fill="#2E3E58">　真實公開文件</tspan></text>
+  <text x="954" y="610" font-size="15" font-weight="700" fill="#101E33">各國招聘成本<tspan font-weight="400" fill="#2E3E58">　示範推估值，正式版接 KNOMAD／ILO</tspan></text>
+  <text x="954" y="636" font-size="15" font-weight="700" fill="#101E33">台灣端收費上限<tspan font-weight="400" fill="#2E3E58">　私立就業服務機構收費標準</tspan></text>
+  <text x="954" y="662" font-size="15" font-weight="700" fill="#101E33">企業與移工資料<tspan font-weight="400" fill="#2E3E58">　全部為示範資料</tspan></text>
+
+  <text x="900" y="712" font-size="20" font-weight="700" fill="#101E33" text-anchor="middle">框架依據公開規範，數字為示範資料 —— 我們把這件事寫在正面。</text>
+</svg>

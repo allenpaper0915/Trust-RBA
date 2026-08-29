@@ -3,29 +3,31 @@ import { useState } from "react";
 import {
   Bot,
   Check,
-  CircleDashed,
   ClipboardList,
   FileText,
   Gavel,
+  Banknote,
   Send,
   ShieldCheck,
   User,
   Users,
 } from "lucide-react";
 
-import { buildEvidenceChain, caseReasons, money, trustPillars } from "@/data/compliance";
+import { money } from "@/data/compliance";
 import {
   decisionMeta,
   docKindMeta,
+  payMethodMeta,
   statusMeta,
   reviewers,
   type ReviewDecision,
 } from "@/data/cases";
-import { assessCase, engineNote, scoreDisclaimer } from "@/lib/risk-engine";
+import { assessCase } from "@/lib/risk-engine";
 import { assessFeeChain, benchmarkFor } from "@/lib/analysis";
+import { doubleCharge, traceability } from "@/lib/assurance";
 import { FeeChain } from "@/components/fee-chain";
 import { usePlatform } from "@/components/platform-store";
-import { WorkflowNav, PageHeader } from "@/components/page-header";
+import { PageHeader } from "@/components/page-header";
 import { StatusPill } from "@/components/status-pill";
 import { cn } from "@/lib/utils";
 
@@ -74,12 +76,12 @@ function CaseDetail() {
   }
 
   const a = assessCase(record);
-  const evidence = buildEvidenceChain(record);
-  const reasons = caseReasons(record);
   const base = benchmarkFor(record.origin);
   const delta = base > 0 ? Math.round(((record.fee - base) / base) * 100) : 0;
   const meta = statusMeta[record.state];
   const chain = assessFeeChain(record.feeItems);
+  const trace = traceability(record);
+  const dbl = doubleCharge(record);
   const events = caseEvents(record.id);
   const decided = Boolean(record.review);
 
@@ -101,7 +103,7 @@ function CaseDetail() {
       <PageHeader
         eyebrow={`${record.source === "worker" ? "移工自主申報" : "合規抽樣"} · ${record.submittedAt}`}
         title={`案件 #${record.id}`}
-        subtitle={`${record.worker} · ${record.origin} → ${record.workplace} · ${record.agency}`}
+        subtitle={`${record.worker} · ${record.origin} → ${record.workplace} · ${record.agency}${record.code ? ` · 查詢碼 ${record.code}` : ""}`}
         aside={
           <div className="flex flex-wrap items-center gap-2">
             <StatusPill tone={meta.tone}>{meta.label}</StatusPill>
@@ -109,66 +111,6 @@ function CaseDetail() {
           </div>
         }
       />
-
-      {/* 案件基本資料 + 指派 */}
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {[
-          { k: "抵達年月", v: record.arrivedAt },
-          { k: "支付方式", v: record.paymentMethod },
-          { k: "查詢碼", v: record.code ?? "（無，屬稽核建案）" },
-          { k: "文件數", v: `${record.docs.length} 份` },
-        ].map((c) => (
-          <div key={c.k} className="card-surface p-5">
-            <div className="text-xs text-muted-foreground">{c.k}</div>
-            <div className="mt-1.5 text-sm font-semibold break-all text-primary-deep">{c.v}</div>
-          </div>
-        ))}
-      </section>
-
-      {/* 金額對照 */}
-      <section className="card-surface p-8">
-        <h2 className="text-base font-bold text-primary-deep">招聘費金額對照</h2>
-        <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {[
-            { k: "仲介／合約聲明", v: money(record.agencyClaim), conflict: true },
-            { k: "移工實付合計", v: money(record.fee), conflict: false },
-            { k: "RBA 不得由移工負擔", v: money(chain.disallowed), conflict: true },
-            { k: "走廊基準", v: money(base), conflict: false },
-          ].map((c) => (
-            <div
-              key={c.k}
-              className={cn(
-                "rounded-lg border p-6",
-                c.conflict ? "border-danger/30 bg-danger-soft" : "border-border bg-secondary",
-              )}
-            >
-              <div className="text-xs text-muted-foreground">{c.k}</div>
-              <div
-                className={cn(
-                  "num mt-2 text-2xl",
-                  c.conflict ? "text-danger" : "text-primary-deep",
-                )}
-              >
-                {c.v}
-              </div>
-            </div>
-          ))}
-        </div>
-        <div className="mt-6 flex flex-wrap gap-6 border-t border-border pt-5 text-sm">
-          <span className="text-muted-foreground">
-            高於基準 <span className="num ml-1 text-danger">{delta > 0 ? `+${delta}%` : "—"}</span>
-          </span>
-          <span className="text-muted-foreground">
-            證據一致性 <span className="num ml-1 text-primary-deep">{record.consistency}%</span>
-          </span>
-          <span className="text-muted-foreground">
-            政策符合度 <span className="num ml-1 text-primary-deep">{record.policyMatch}%</span>
-          </span>
-          <Link to="/evidence" className="text-primary hover:underline">
-            檢視完整證據鏈 →
-          </Link>
-        </div>
-      </section>
 
       {/* 費用鏈 */}
       <section className="card-surface p-8">
@@ -188,6 +130,20 @@ function CaseDetail() {
             )}
           </div>
         </div>
+
+        <dl className="mt-6 grid gap-x-8 gap-y-3 border-y border-border py-4 sm:grid-cols-2 xl:grid-cols-4">
+          {[
+            { k: "仲介／合約聲明", v: money(record.agencyClaim), tone: "text-danger" },
+            { k: "移工實付合計", v: money(record.fee) },
+            { k: "RBA 不得由移工負擔", v: money(chain.disallowed), tone: "text-danger" },
+            { k: `該國基準（高於 ${delta > 0 ? `+${delta}%` : "—"}）`, v: money(base) },
+          ].map((c) => (
+            <div key={c.k} className="flex items-baseline justify-between gap-3">
+              <dt className="text-xs text-muted-foreground">{c.k}</dt>
+              <dd className={cn("num text-base text-primary-deep", c.tone)}>{c.v}</dd>
+            </div>
+          ))}
+        </dl>
 
         <div className="mt-6 grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
           <FeeChain items={record.feeItems} linkVendors />
@@ -233,14 +189,124 @@ function CaseDetail() {
         </div>
       </section>
 
+      {/* 金流軌跡與重複收費：企業自己的帳就能證明的事 */}
+      <section className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
+        <div className="card-surface p-7">
+          <h2 className="flex items-center gap-2.5 text-base font-bold text-primary-deep">
+            <Banknote className="size-4 text-primary" /> 金流軌跡
+          </h2>
+          <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+            錢一定有軌跡——除非付的是現金。可追查的部分能向銀行或薪資系統調閱對帳，
+            現金的部分只能靠收據與訪談。
+          </p>
+
+          <div className="mt-6 flex gap-[2px] overflow-hidden rounded">
+            {trace.traceable > 0 && (
+              <div
+                className="h-4 rounded-l bg-primary"
+                style={{ width: `${(trace.traceable / Math.max(trace.total, 1)) * 100}%` }}
+              />
+            )}
+            {trace.untraceable > 0 && (
+              <div
+                className="h-4 rounded-r bg-warning"
+                style={{ width: `${(trace.untraceable / Math.max(trace.total, 1)) * 100}%` }}
+              />
+            )}
+          </div>
+
+          <dl className="mt-5 space-y-3 text-sm">
+            <div className="flex items-baseline justify-between gap-4">
+              <dt className="flex items-center gap-2 text-muted-foreground">
+                <span className="size-2 rounded-sm bg-primary" /> 可追查金流
+              </dt>
+              <dd className="num text-primary-deep">{money(trace.traceable)}</dd>
+            </div>
+            <div className="flex items-baseline justify-between gap-4">
+              <dt className="flex items-center gap-2 text-muted-foreground">
+                <span className="size-2 rounded-sm bg-warning" /> 現金・無軌跡
+              </dt>
+              <dd className="num text-warning-foreground">{money(trace.untraceable)}</dd>
+            </div>
+          </dl>
+
+          <ul className="mt-5 space-y-2 border-t border-border pt-5">
+            {record.feeItems.map((item) => (
+              <li key={item.id} className="flex items-center justify-between gap-3 text-xs">
+                <span className="min-w-0 truncate text-muted-foreground">{item.payee}</span>
+                <span className="flex shrink-0 items-center gap-2.5">
+                  <span
+                    className={cn(
+                      "rounded border px-1.5 py-0.5 text-[11px]",
+                      payMethodMeta[item.method].traceable
+                        ? "border-primary/25 bg-primary-soft text-primary"
+                        : "border-warning/35 bg-warning-soft text-warning-foreground",
+                    )}
+                  >
+                    {payMethodMeta[item.method].label}
+                  </span>
+                  <span className="num w-20 text-right text-primary-deep">
+                    {money(item.amount)}
+                  </span>
+                </span>
+              </li>
+            ))}
+          </ul>
+
+          <p className="mt-5 border-t border-border pt-4 text-xs leading-relaxed text-muted-foreground">
+            {trace.untraceable > 0
+              ? `其中 ${money(trace.untraceable)} 為現金支付，無法以金流佐證，需以收據與同來源國比對補強。`
+              : "全部款項都有金流紀錄，可逐筆向銀行調閱佐證。"}
+          </p>
+        </div>
+
+        {dbl && (
+          <div className="rounded-lg border border-danger/30 bg-danger-soft p-7">
+            <h2 className="text-base font-bold text-danger">同一段服務被收了兩次</h2>
+            <p className="mt-1.5 text-sm leading-relaxed text-primary-deep/80">
+              企業自己的應付帳款證明這段招聘服務已經付過款。移工又付了一次，
+              這不是價格爭議，是重複收費。
+            </p>
+
+            <div className="mt-6 space-y-4">
+              <div className="rounded-md border border-border bg-card p-4">
+                <div className="text-xs text-muted-foreground">
+                  雇主已付（{dbl.payment.period} · {dbl.payment.agency}）
+                </div>
+                <div className="num mt-1 text-2xl text-primary-deep">
+                  {money(dbl.payment.perWorker)}
+                  <span className="ml-1.5 text-xs font-normal text-muted-foreground">／人</span>
+                </div>
+                <div className="num mt-1.5 text-[11px] text-muted-foreground">
+                  {dbl.payment.invoiceRef} · {dbl.payment.transferRef} · 已對帳
+                </div>
+              </div>
+
+              <div className="rounded-md border border-danger/25 bg-card p-4">
+                <div className="text-xs text-muted-foreground">
+                  移工又付給{dbl.payees.length} 個收款方
+                </div>
+                <div className="num mt-1 text-2xl text-danger">{money(dbl.workerPaid)}</div>
+                <div className="mt-1.5 text-[11px] text-muted-foreground">
+                  {dbl.payees.join("、")}
+                </div>
+              </div>
+            </div>
+
+            <p className="mt-6 border-t border-danger/20 pt-4 text-xs leading-relaxed text-primary-deep/75">
+              雇主端憑證取自企業內部帳務，立即可得且已與銀行對帳——這是最容易拿出來、
+              卻最少被拿出來的一份證據。
+            </p>
+          </div>
+        )}
+      </section>
+
       {/* 移工提交的文件（已去識別化） */}
       <section className="card-surface p-8">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <h2 className="text-base font-bold text-primary-deep">申報文件</h2>
-            <p className="mt-1.5 text-sm text-muted-foreground">
-              所有文件在離開移工端之前已完成去識別化，企業端看不到姓名、證件號、電話與帳號。
-            </p>
+            <p className="mt-1.5 text-sm text-muted-foreground">送出前已完成去識別化</p>
           </div>
           <div className="flex flex-wrap gap-2">
             {record.identityVerified && <StatusPill tone="success">身分已核驗</StatusPill>}
@@ -299,93 +365,6 @@ function CaseDetail() {
         )}
       </section>
 
-      {/* AI 判斷依據 + Evidence Score */}
-      <section className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-        <div className="card-surface p-8">
-          <h2 className="text-xl font-bold text-primary-deep">為什麼 AI 判定{a.label}？</h2>
-          <p className="mt-1.5 text-sm text-muted-foreground">AI 判斷依據</p>
-          <ol className="mt-6 space-y-4 border-t border-border pt-6">
-            {reasons.map((r, i) => (
-              <li key={r} className="flex gap-4">
-                <span className="num flex size-6 shrink-0 items-center justify-center rounded bg-primary-soft text-[11px] text-primary">
-                  {i + 1}
-                </span>
-                <span className="text-sm leading-relaxed text-primary-deep">{r}</span>
-              </li>
-            ))}
-          </ol>
-
-          <div className="mt-7 rounded-lg border border-danger/25 bg-danger-soft p-6">
-            <div className="text-xs tracking-wider text-muted-foreground">AI 結論</div>
-            <p className="mt-2 text-lg font-bold text-danger">疑似 RBA 招聘費合規風險</p>
-            <p className="mt-2.5 text-sm leading-relaxed text-muted-foreground">
-              需要人工合規審核，不由 AI 自動判定違法。
-            </p>
-          </div>
-        </div>
-
-        <div className="card-surface p-8">
-          <h2 className="text-base font-bold text-primary-deep">可解釋 Evidence Score</h2>
-          <p className="mt-1.5 text-sm text-muted-foreground">證據完整度：每一分都可追溯來源。</p>
-
-          <ul className="mt-6 space-y-3 border-t border-border pt-6">
-            {a.weights.map((w) => (
-              <li
-                key={w.key}
-                className={cn(
-                  "flex items-center justify-between rounded-md px-3 py-2.5 text-sm",
-                  w.present ? "bg-secondary" : "bg-transparent",
-                )}
-              >
-                <span className="flex items-center gap-2.5">
-                  {w.present ? (
-                    <Check className="size-3.5 text-success" />
-                  ) : (
-                    <CircleDashed className="size-3.5 text-muted-foreground" />
-                  )}
-                  <span className={w.present ? "text-primary-deep" : "text-muted-foreground"}>
-                    {w.label}
-                  </span>
-                  {w.present && w.conflicting && (
-                    <span className="rounded bg-danger-soft px-1.5 py-0.5 text-[10px] text-danger">
-                      衝突證據
-                    </span>
-                  )}
-                </span>
-                <span
-                  className={cn(
-                    "num",
-                    w.present ? "text-primary-deep" : "text-muted-foreground/60",
-                  )}
-                >
-                  {w.present ? `+${w.points}` : "—"}
-                </span>
-              </li>
-            ))}
-          </ul>
-
-          <div className="mt-6 space-y-3 border-t border-border pt-6">
-            <div className="flex items-baseline justify-between">
-              <span className="text-sm text-muted-foreground">證據完整度分數</span>
-              <span className="num text-3xl text-primary-deep">
-                {a.evidenceScore}
-                <span className="ml-1 text-sm font-normal text-muted-foreground">/ 100</span>
-              </span>
-            </div>
-            <div className="flex items-baseline justify-between">
-              <span className="text-sm text-muted-foreground">風險分數（衝突證據權重）</span>
-              <span className="num text-2xl text-danger">
-                {a.riskScore}
-                <span className="ml-1 text-sm font-normal text-muted-foreground">/ 100</span>
-              </span>
-            </div>
-          </div>
-
-          <p className="mt-6 text-xs leading-relaxed text-muted-foreground">{scoreDisclaimer}</p>
-          <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{engineNote}</p>
-        </div>
-      </section>
-
       {/* 人工審核 */}
       <section className="rounded-lg border border-primary/25 bg-primary-soft p-8">
         <div className="flex flex-wrap items-start justify-between gap-6">
@@ -394,9 +373,8 @@ function CaseDetail() {
               <Gavel className="size-5 text-primary" />
               人工審核決定
             </h2>
-            <p className="mt-3 text-sm leading-loose text-primary-deep/80">
-              AI 可以發現風險與整理證據，但不能自行宣布企業違法，也不能自行執行不可逆的處置。
-              以下決定會寫入稽核紀錄，並同步顯示給提出申報的移工。
+            <p className="mt-3 text-sm text-primary-deep/80">
+              決定會寫入稽核紀錄，並同步顯示給提出申報的移工。
             </p>
           </div>
           <label className="text-xs text-primary-deep/70">
@@ -559,33 +537,6 @@ function CaseDetail() {
           })}
         </ol>
       </section>
-
-      {/* Trustworthy AI */}
-      <section>
-        <div className="mb-6 border-t border-border pt-10">
-          <h2 className="flex items-center gap-2.5 text-xl font-bold text-primary-deep">
-            <ShieldCheck className="size-5 text-primary" />
-            為什麼可以信任 AI？
-          </h2>
-          <p className="mt-1.5 text-sm text-muted-foreground">
-            信任不是靠模型自我聲明，而是靠授權範圍、證據來源與可追溯性。
-          </p>
-        </div>
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {trustPillars.map((p) => (
-            <div key={p.q} className="card-surface p-7">
-              <div className="text-xs tracking-wider text-muted-foreground">{p.q}</div>
-              <div className="mt-2 text-sm font-semibold text-primary-deep">{p.a}</div>
-              <p className="mt-2.5 text-xs leading-relaxed text-muted-foreground">{p.detail}</p>
-            </div>
-          ))}
-        </div>
-        <p className="mt-6 text-xs text-muted-foreground">
-          本案件共 {evidence.length} 項證據納入判斷。
-        </p>
-      </section>
-
-      <WorkflowNav current={`/cases/${record.id}`} />
     </div>
   );
 }

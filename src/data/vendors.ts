@@ -39,7 +39,7 @@ export const vendors: Vendor[] = [
     type: "destination_agency",
     country: "台灣",
     since: "2021 / 03",
-    workers: 186,
+    workers: 261,
     registered: true,
   },
   {

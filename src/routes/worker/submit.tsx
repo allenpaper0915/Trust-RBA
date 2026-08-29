@@ -17,7 +17,14 @@ import {
 
 import { BigButton, Field, inputClass } from "@/components/worker-shell";
 import { usePlatform, useT } from "@/components/platform-store";
-import { docKindMeta, type CaseDoc, type DocKind, type FeeItem } from "@/data/cases";
+import {
+  docKindMeta,
+  payMethodMeta,
+  type CaseDoc,
+  type DocKind,
+  type FeeItem,
+  type PayMethod,
+} from "@/data/cases";
 import {
   feeCategories,
   feeCategoryMeta,
@@ -89,13 +96,21 @@ const emptyForm = {
 };
 
 /** 費用明細的一列（金額為使用者輸入的原始幣別字串）。 */
-type FeeRow = { id: string; category: FeeCategory; payee: string; amount: string; hasDoc: boolean };
+type FeeRow = {
+  id: string;
+  category: FeeCategory;
+  payee: string;
+  amount: string;
+  method: PayMethod;
+  hasDoc: boolean;
+};
 
 const newRow = (category: FeeCategory = "agency_service"): FeeRow => ({
   id: `R-${Math.random().toString(36).slice(2, 8)}`,
   category,
   payee: "",
   amount: "",
+  method: "bank",
   hasDoc: true,
 });
 
@@ -142,6 +157,7 @@ function SubmitWizard() {
         payee: r.payee.trim() || feeCategoryMeta[r.category].label,
         vendorId: vendor?.id,
         amount: toTWD(Number(r.amount.replace(/[^\d.]/g, "")), form.currency),
+        method: r.method,
         hasDocument: r.hasDoc,
       };
     });
@@ -448,6 +464,24 @@ function SubmitWizard() {
                       className={`${inputClass} mt-1.5 py-2`}
                     />
                   </label>
+                  <label className="mt-3 block">
+                    <span className="text-xs text-muted-foreground">{t("fee.method")}</span>
+                    <select
+                      value={row.method}
+                      onChange={(e) => updateRow(row.id, { method: e.target.value as PayMethod })}
+                      className={`${inputClass} mt-1.5 py-2`}
+                    >
+                      {(Object.keys(payMethodMeta) as PayMethod[]).map((m) => (
+                        <option key={m} value={m}>
+                          {t(`pay.${m}`)}
+                        </option>
+                      ))}
+                    </select>
+                    <span className="mt-1 block text-[11px] leading-relaxed text-muted-foreground">
+                      {row.method === "cash" ? t("fee.cashHint") : t("fee.traceHint")}
+                    </span>
+                  </label>
+
                   <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
                     <label className="flex cursor-pointer items-center gap-2 text-xs text-primary-deep">
                       <input
@@ -719,6 +753,7 @@ function SubmitWizard() {
                   notAllowed: t("fee.notAllowed"),
                   allowed: t("fee.allowed"),
                   noDocument: t("fee.noDocument"),
+                  cash: t("res.untraceable"),
                   unregistered: t("fee.unregistered"),
                   total: t("fee.total"),
                   disallowedTotal: t("fee.disallowedTotal"),

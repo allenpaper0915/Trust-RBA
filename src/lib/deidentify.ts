@@ -34,7 +34,7 @@ export const retainedFields = [
   { label: "支付日期", reason: "判斷是否落在受僱期間" },
   { label: "幣別", reason: "換算為同一基準幣別" },
   { label: "仲介／收款方名稱", reason: "追查同一仲介的其他案件" },
-  { label: "來源國與工作地", reason: "對應 ILO / KNOMAD 的移工走廊基準" },
+  { label: "來源國與工作地", reason: "對應 ILO / KNOMAD 的招聘成本基準" },
 ];
 
 const rules: PiiRule[] = [

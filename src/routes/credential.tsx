@@ -12,9 +12,11 @@ import {
 import { useState } from "react";
 
 import { credential, newEvidence, privacyDisclosure } from "@/data/compliance";
-import { WorkflowNav, PageHeader } from "@/components/page-header";
+import { PageHeader } from "@/components/page-header";
 import { StatusPill } from "@/components/status-pill";
 import { useSession } from "@/components/session-state";
+import { usePlatform } from "@/components/platform-store";
+import { coverage } from "@/lib/assurance";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/credential")({
@@ -37,6 +39,9 @@ export const Route = createFileRoute("/credential")({
 });
 
 function CredentialCard({ revoked }: { revoked: boolean }) {
+  const { cases } = usePlatform();
+  const cov = coverage(cases);
+
   return (
     <div
       className={cn(
@@ -76,16 +81,16 @@ function CredentialCard({ revoked }: { revoked: boolean }) {
 
       <dl className="relative mt-10 grid gap-6 border-t border-white/15 pt-7 sm:grid-cols-4">
         {[
-          { k: "驗證移工", v: credential.workers },
-          { k: "驗證仲介", v: credential.agencies },
-          { k: "證據完整度", v: `${credential.evidenceCompleteness}%` },
-          { k: "未解決高風險案件", v: revoked ? 1 : credential.unresolved },
+          { k: "驗證範圍（在職移工）", v: cov.workers },
+          { k: "已證明未收費", v: `${cov.proven}（${Math.round(cov.rate * 100)}%）` },
+          { k: "尚無法證明", v: cov.unproven },
+          { k: "未解決不當收費", v: revoked ? cov.confirmed + 1 : cov.confirmed },
         ].map((s) => (
           <div key={s.k}>
             <dd
               className={cn(
                 "num text-2xl",
-                revoked && s.k === "未解決高風險案件" && "text-[oklch(0.85_0.13_45)]",
+                revoked && s.k === "未解決不當收費" && "text-[oklch(0.85_0.13_45)]",
               )}
             >
               {s.v}
@@ -94,6 +99,12 @@ function CredentialCard({ revoked }: { revoked: boolean }) {
           </div>
         ))}
       </dl>
+
+      <p className="relative mt-7 border-t border-white/15 pt-6 text-xs leading-relaxed text-white/70">
+        本憑證聲明的是<b className="font-semibold text-white">舉證覆蓋率</b>，不是「零收費」。
+        {cov.unproven} 名移工目前仍拿不出正面證據，這一點在憑證上如實揭露，
+        由查驗方自行判斷是否足夠。
+      </p>
 
       <div className="relative mt-8 grid gap-4 border-t border-white/15 pt-6 text-xs sm:grid-cols-3">
         <div>
@@ -272,8 +283,6 @@ function CredentialPage() {
           </div>
         )}
       </section>
-
-      <WorkflowNav current="/credential" />
     </div>
   );
 }

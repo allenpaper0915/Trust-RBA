@@ -107,7 +107,7 @@ function seedEvents(cases: CaseRecord[]): PlatformEvent[] {
         caseId: c.id,
         actor: "reviewer",
         action: "合規抽樣建案",
-        evidence: `${c.agency} · ${c.origin} 走廊`,
+        evidence: `${c.agency} · ${c.origin} 來源國`,
         auth: "年度稽核計畫",
         result: "已建案",
       });
@@ -150,6 +150,19 @@ export function PlatformProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     try {
+      // 網址帶 ?reset=1 時回到初始資料。刻意不做成介面上的按鈕——
+      // 正式產品不會有「重設」這種東西，但簡報前需要一個乾淨起點。
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("reset") === "1") {
+        window.localStorage.removeItem(KEY);
+        window.localStorage.removeItem("trustrba-session");
+        params.delete("reset");
+        const q = params.toString();
+        window.history.replaceState(null, "", window.location.pathname + (q ? `?${q}` : ""));
+        setHydrated(true);
+        return;
+      }
+
       const raw = window.localStorage.getItem(KEY);
       if (raw) {
         const p = JSON.parse(raw) as Partial<Persisted> & { role?: Role; locale?: Locale };

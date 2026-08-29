@@ -559,20 +559,3 @@ export const revocationAuditLog = [
     result: "CREDENTIAL REVOKED",
   },
 ];
-
-/** 主流程順序，用於頁面底部的「上一步／下一步」導引。 */
-export const workflowSteps = [
-  { to: "/", title: "問題", step: 0, caption: "為什麼合規文件不等於合規事實" },
-  { to: "/worker", title: "移工申報", step: 1, caption: "移工端：免帳號、多語言的申報入口" },
-  { to: "/worker/submit", title: "移工申報", step: 1, caption: "上傳文件與去識別化" },
-  { to: "/dashboard", title: "企業偵測", step: 2, caption: "合規總覽與仲介風險排行" },
-  { to: "/verification", title: "企業偵測", step: 2, caption: "AI 驗證中心" },
-  { to: "/evidence", title: "企業偵測", step: 2, caption: "證據鏈與交叉驗證" },
-  { to: "/cases", title: "人工審核", step: 3, caption: "案件審核佇列" },
-  { to: "/vendors", title: "人工審核", step: 3, caption: "中間商合規總表" },
-  { to: `/cases/${primaryCase.id}`, title: "人工審核", step: 3, caption: "AI 判斷依據與審核決定" },
-  { to: "/remediation", title: "改善返還", step: 4, caption: "返還追蹤與改善步驟" },
-  { to: "/credential", title: "憑證與驗證", step: 5, caption: "RBA 合規憑證" },
-  { to: "/verify", title: "憑證與驗證", step: 5, caption: "第三方驗證與撤銷" },
-  { to: "/audit", title: "憑證與驗證", step: 5, caption: "稽核紀錄" },
-];

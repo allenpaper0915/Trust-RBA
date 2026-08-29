@@ -4,10 +4,10 @@ import { ChevronRight, Download, Search, Users, ClipboardList } from "lucide-rea
 
 import { enterprise, money } from "@/data/compliance";
 import { statusMeta, type CaseStatus } from "@/data/cases";
-import { assessCase, riskBands, weightTable } from "@/lib/risk-engine";
+import { assessCase } from "@/lib/risk-engine";
 import { benchmarkFor } from "@/lib/analysis";
 import { usePlatform } from "@/components/platform-store";
-import { WorkflowNav, PageHeader } from "@/components/page-header";
+import { PageHeader } from "@/components/page-header";
 import { StatusPill } from "@/components/status-pill";
 import { cn } from "@/lib/utils";
 
@@ -112,13 +112,11 @@ function CaseQueue() {
         }
       />
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {[
           { label: "待人工審核", value: counts.pending, tone: "text-warning-foreground" },
           { label: "調查中", value: counts.investigating, tone: "text-primary" },
-          { label: "需補件", value: counts.needMore, tone: "text-muted-foreground" },
           { label: "已確認不當收費", value: counts.confirmed, tone: "text-danger" },
-          { label: "來自移工自主申報", value: counts.fromWorker, tone: "text-primary-deep" },
         ].map((c) => (
           <div key={c.label} className="card-surface p-5">
             <div className="text-xs text-muted-foreground">{c.label}</div>
@@ -183,7 +181,7 @@ function CaseQueue() {
             <tr className="border-b border-border bg-secondary text-left text-xs text-muted-foreground">
               <th className="px-5 py-3.5 font-medium">案件</th>
               <th className="px-5 py-3.5 font-medium">來源</th>
-              <th className="px-5 py-3.5 font-medium">走廊 / 仲介</th>
+              <th className="px-5 py-3.5 font-medium">來源國 / 仲介</th>
               <th className="px-5 py-3.5 text-right font-medium">實付</th>
               <th className="px-5 py-3.5 text-right font-medium">高於基準</th>
               <th className="px-5 py-3.5 text-right font-medium">證據</th>
@@ -271,50 +269,6 @@ function CaseQueue() {
           </tbody>
         </table>
       </section>
-
-      {/* 計分規則公開 */}
-      <section className="grid gap-6 lg:grid-cols-2">
-        <div className="card-surface p-8">
-          <h2 className="text-base font-bold text-primary-deep">證據權重表</h2>
-          <p className="mt-1.5 text-sm text-muted-foreground">系統預設的固定值，不由 LLM 產生。</p>
-          <ul className="mt-6 space-y-3 border-t border-border pt-5">
-            {weightTable.map((w) => (
-              <li key={w.key} className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">{w.label}</span>
-                <span className="num text-primary-deep">+{w.points}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div className="card-surface p-8">
-          <h2 className="text-base font-bold text-primary-deep">風險級距</h2>
-          <p className="mt-1.5 text-sm text-muted-foreground">
-            風險分數 = 與仲介聲明衝突之證據權重總和。
-          </p>
-          <ul className="mt-6 space-y-3 border-t border-border pt-5">
-            {riskBands.map((b) => (
-              <li key={b.range} className="flex items-center justify-between text-sm">
-                <span className="num text-muted-foreground">{b.range}</span>
-                <span
-                  className={cn(
-                    "font-medium",
-                    b.tone === "success"
-                      ? "text-success"
-                      : b.tone === "warning"
-                        ? "text-warning-foreground"
-                        : "text-danger",
-                  )}
-                >
-                  {b.level}風險
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
-
-      <WorkflowNav current="/cases" />
     </div>
   );
 }

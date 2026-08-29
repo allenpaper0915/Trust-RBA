@@ -6,7 +6,7 @@ import { money, remediationSteps } from "@/data/compliance";
 import { statusMeta } from "@/data/cases";
 import { benchmarkFor } from "@/lib/analysis";
 import { usePlatform } from "@/components/platform-store";
-import { WorkflowNav, PageHeader } from "@/components/page-header";
+import { PageHeader } from "@/components/page-header";
 import { StatusPill } from "@/components/status-pill";
 import { cn } from "@/lib/utils";
 
@@ -39,7 +39,7 @@ function Remediation() {
   const outstanding = refundCases.filter((c) => c.state === "confirmed");
   const refundTotal = refundCases.reduce((s, c) => s + (c.review?.refund ?? 0), 0);
   const outstandingTotal = outstanding.reduce((s, c) => s + (c.review?.refund ?? 0), 0);
-  // 尚未核定金額時，以「實付 − 走廊基準」提供估算區間。
+  // 尚未核定金額時，以「實付 − 該國基準」提供估算區間。
   const estimate = cases
     .filter((c) => c.state === "pending_review" || c.state === "investigating")
     .reduce((s, c) => s + Math.max(0, c.fee - benchmarkFor(c.origin)), 0);
@@ -210,8 +210,6 @@ function Remediation() {
           </Link>
         </div>
       </section>
-
-      <WorkflowNav current="/remediation" />
     </div>
   );
 }
