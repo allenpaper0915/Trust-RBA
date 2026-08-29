@@ -91,7 +91,7 @@ function WorkerHome() {
           </div>
           {error && <p className="mt-3 text-xs text-danger">{error}</p>}
           <p className="mt-3 text-[11px] text-muted-foreground">
-            Demo 可用查詢碼：<span className="font-mono">TRB-K7M3QX</span> ·{" "}
+            示範查詢碼：<span className="font-mono">TRB-K7M3QX</span> ·{" "}
             <span className="font-mono">TRB-6VXK4D</span> ·{" "}
             <span className="font-mono">TRB-8NQR2C</span>
           </p>

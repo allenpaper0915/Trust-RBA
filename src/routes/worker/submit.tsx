@@ -11,12 +11,21 @@ import {
   Loader2,
   Lock,
   Paperclip,
+  Plus,
   Trash2,
 } from "lucide-react";
 
 import { BigButton, Field, inputClass } from "@/components/worker-shell";
 import { usePlatform, useT } from "@/components/platform-store";
-import { docKindMeta, type CaseDoc, type DocKind } from "@/data/cases";
+import { docKindMeta, type CaseDoc, type DocKind, type FeeItem } from "@/data/cases";
+import {
+  feeCategories,
+  feeCategoryMeta,
+  resolveVendorByName,
+  vendors,
+  type FeeCategory,
+} from "@/data/vendors";
+import { FeeChain } from "@/components/fee-chain";
 import {
   analyse,
   currencies,
@@ -50,6 +59,10 @@ type LocalDoc = CaseDoc & { text: string; scanning: boolean };
 function sampleOcrText(kind: DocKind, agency: string, amount: string): string {
   const head = `姓名：Nguyễn Văn Hùng\n護照號碼：C1234567\n電話：0912-345-678\n地址：桃園市中壢區中央西路二段 100 號`;
   switch (kind) {
+    case "identity":
+      return `護照 / PASSPORT\n${head}\n出生：1996/04/22\n國籍：越南\n效期：2024/03 – 2034/03`;
+    case "offer":
+      return `錄取通知書 / OFFER LETTER\n${head}\n雇主：ABC Electronics\n職務：產線作業員\n月薪：NT$27,470\n報到日：2025/11/20`;
     case "receipt":
       return `收據 / BIÊN LAI\n${head}\n收款單位：${agency || "ABC Recruitment Agency"}\n項目：仲介服務費、訓練費、體檢費\n金額：NT$${amount}\n日期：2025/11/03`;
     case "transfer":
@@ -70,11 +83,21 @@ const emptyForm = {
   workplace: "台灣",
   agency: "",
   arrivedAt: "",
-  amount: "",
   currency: "TWD" as CurrencyCode,
   paymentMethod: paymentMethods[0]!,
   note: "",
 };
+
+/** 費用明細的一列（金額為使用者輸入的原始幣別字串）。 */
+type FeeRow = { id: string; category: FeeCategory; payee: string; amount: string; hasDoc: boolean };
+
+const newRow = (category: FeeCategory = "agency_service"): FeeRow => ({
+  id: `R-${Math.random().toString(36).slice(2, 8)}`,
+  category,
+  payee: "",
+  amount: "",
+  hasDoc: true,
+});
 
 const analysisStages = [
   "檢查文件是否可讀取…",
@@ -91,6 +114,11 @@ function SubmitWizard() {
 
   const [step, setStep] = useState(1);
   const [form, setForm] = useState(emptyForm);
+  const [feeRows, setFeeRows] = useState<FeeRow[]>([newRow()]);
+  const vendorNames = vendors.map((v) => v.name);
+
+  const updateRow = (id: string, patch: Partial<FeeRow>) =>
+    setFeeRows((rows) => rows.map((r) => (r.id === id ? { ...r, ...patch } : r)));
   const [docs, setDocs] = useState<LocalDoc[]>([]);
   const [errors, setErrors] = useState<{ agency?: string; arrivedAt?: string; amount?: string }>(
     {},
@@ -103,8 +131,22 @@ function SubmitWizard() {
 
   const set = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
-  const amountNumber = Number(form.amount.replace(/[^\d.]/g, "")) || 0;
-  const paidTWD = toTWD(amountNumber, form.currency);
+  // 費用明細轉成 TWD 的 FeeItem；名稱比對得到合約名單才會有 vendorId。
+  const feeItems: FeeItem[] = feeRows
+    .filter((r) => Number(r.amount.replace(/[^\d.]/g, "")) > 0)
+    .map((r) => {
+      const vendor = resolveVendorByName(r.payee);
+      return {
+        id: r.id,
+        category: r.category,
+        payee: r.payee.trim() || feeCategoryMeta[r.category].label,
+        vendorId: vendor?.id,
+        amount: toTWD(Number(r.amount.replace(/[^\d.]/g, "")), form.currency),
+        hasDocument: r.hasDoc,
+      };
+    });
+  const paidTWD = feeItems.reduce((sum, i) => sum + i.amount, 0);
+  const amountNumber = paidTWD;
 
   /** 待送出的完整文字：申報說明 + 每份文件的 OCR 文字。 */
   const rawText = useMemo(
@@ -171,7 +213,7 @@ function SubmitWizard() {
     const e: { agency?: string; arrivedAt?: string; amount?: string } = {};
     if (!form.agency.trim()) e.agency = t("wiz.required");
     if (!form.arrivedAt.trim()) e.arrivedAt = t("wiz.required");
-    if (amountNumber <= 0) e.amount = t("wiz.required");
+    if (feeItems.length === 0) e.amount = t("fee.needOne");
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -191,8 +233,8 @@ function SubmitWizard() {
           workplace: form.workplace,
           agency: form.agency.trim(),
           arrivedAt: form.arrivedAt.trim(),
-          amount: amountNumber,
           currency: form.currency,
+          feeItems,
           paymentMethod: form.paymentMethod,
           note: deidentify(form.note).redacted,
           docs: finalDocs,
@@ -333,16 +375,7 @@ function SubmitWizard() {
             />
           </Field>
 
-          <div className="grid gap-5 sm:grid-cols-[1.4fr_1fr]">
-            <Field label={t("wiz.amount")} hint={t("wiz.amountHint")} error={errors.amount}>
-              <input
-                inputMode="numeric"
-                value={form.amount}
-                onChange={(e) => set("amount", e.target.value)}
-                placeholder="60000"
-                className={inputClass}
-              />
-            </Field>
+          <div className="grid gap-5 sm:grid-cols-[1fr_1fr]">
             <Field label={t("wiz.currency")}>
               <select
                 value={form.currency}
@@ -356,25 +389,109 @@ function SubmitWizard() {
                 ))}
               </select>
             </Field>
+            <Field label={t("wiz.method")}>
+              <select
+                value={form.paymentMethod}
+                onChange={(e) => set("paymentMethod", e.target.value)}
+                className={inputClass}
+              >
+                {paymentMethods.map((m) => (
+                  <option key={m}>{m}</option>
+                ))}
+              </select>
+            </Field>
           </div>
 
-          {amountNumber > 0 && form.currency !== "TWD" && (
-            <p className="text-xs text-muted-foreground">
-              換算後約 <span className="num text-primary-deep">{money(paidTWD)}</span>
-            </p>
-          )}
+          {/* 費用明細：把一筆總額拆成一條付款鏈，這是整個判斷的起點。 */}
+          <div className="rounded-lg border border-border bg-card p-5">
+            <div className="text-sm font-medium text-primary-deep">{t("fee.title")}</div>
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{t("fee.hint")}</p>
 
-          <Field label={t("wiz.method")}>
-            <select
-              value={form.paymentMethod}
-              onChange={(e) => set("paymentMethod", e.target.value)}
-              className={inputClass}
-            >
-              {paymentMethods.map((m) => (
-                <option key={m}>{m}</option>
+            <ul className="mt-4 space-y-4">
+              {feeRows.map((row, i) => (
+                <li key={row.id} className="rounded-md border border-border bg-secondary p-4">
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <label className="block">
+                      <span className="text-xs text-muted-foreground">{t("fee.category")}</span>
+                      <select
+                        value={row.category}
+                        onChange={(e) =>
+                          updateRow(row.id, { category: e.target.value as FeeCategory })
+                        }
+                        className={`${inputClass} mt-1.5 py-2`}
+                      >
+                        {feeCategories.map((c) => (
+                          <option key={c} value={c}>
+                            {t(`cat.${c}`)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="block">
+                      <span className="text-xs text-muted-foreground">{t("fee.amount")}</span>
+                      <input
+                        inputMode="numeric"
+                        value={row.amount}
+                        onChange={(e) => updateRow(row.id, { amount: e.target.value })}
+                        placeholder="0"
+                        className={`${inputClass} mt-1.5 py-2`}
+                      />
+                    </label>
+                  </div>
+                  <label className="mt-3 block">
+                    <span className="text-xs text-muted-foreground">{t("fee.payee")}</span>
+                    <input
+                      list="known-vendors"
+                      value={row.payee}
+                      onChange={(e) => updateRow(row.id, { payee: e.target.value })}
+                      placeholder={t("fee.payeeHint")}
+                      className={`${inputClass} mt-1.5 py-2`}
+                    />
+                  </label>
+                  <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+                    <label className="flex cursor-pointer items-center gap-2 text-xs text-primary-deep">
+                      <input
+                        type="checkbox"
+                        checked={row.hasDoc}
+                        onChange={(e) => updateRow(row.id, { hasDoc: e.target.checked })}
+                        className="size-3.5 accent-[oklch(0.475_0.128_254)]"
+                      />
+                      {t("fee.hasDoc")}
+                    </label>
+                    {feeRows.length > 1 && (
+                      <button
+                        onClick={() => setFeeRows((rows) => rows.filter((r) => r.id !== row.id))}
+                        className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-danger"
+                      >
+                        <Trash2 className="size-3.5" /> {t("fee.remove")}
+                      </button>
+                    )}
+                  </div>
+                  {i === feeRows.length - 1 && (
+                    <datalist id="known-vendors">
+                      {vendorNames.map((n) => (
+                        <option key={n} value={n} />
+                      ))}
+                    </datalist>
+                  )}
+                </li>
               ))}
-            </select>
-          </Field>
+            </ul>
+
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
+              <button
+                onClick={() => setFeeRows((rows) => [...rows, newRow("training")])}
+                className="inline-flex items-center gap-1.5 rounded-md border border-border-strong bg-card px-4 py-2 text-xs font-medium text-primary-deep hover:bg-muted"
+              >
+                <Plus className="size-3.5" /> {t("fee.add")}
+              </button>
+              <span className="text-sm text-muted-foreground">
+                {t("fee.total")}
+                <span className="num ml-2 text-primary-deep">{money(paidTWD)}</span>
+              </span>
+            </div>
+            {errors.amount && <p className="mt-2 text-xs text-danger">{errors.amount}</p>}
+          </div>
 
           <Field label={t("wiz.note")} hint={t("wiz.noteHint")}>
             <textarea
@@ -465,9 +582,9 @@ function SubmitWizard() {
                             }}
                             className={`${inputClass} mt-1.5 py-2`}
                           >
-                            {Object.entries(docKindMeta).map(([k, m]) => (
+                            {Object.keys(docKindMeta).map((k) => (
                               <option key={k} value={k}>
-                                {m.label}
+                                {t(`doc.${k}`)}
                               </option>
                             ))}
                           </select>
@@ -590,6 +707,26 @@ function SubmitWizard() {
               </div>
             ))}
           </dl>
+
+          <div className="card-surface p-5">
+            <div className="text-sm font-bold text-primary-deep">{t("fee.chainTitle")}</div>
+            <div className="mt-4">
+              <FeeChain
+                items={feeItems}
+                categoryLabel={(c) => t(`cat.${c}`)}
+                text={{
+                  payee: t("fee.payee"),
+                  notAllowed: t("fee.notAllowed"),
+                  allowed: t("fee.allowed"),
+                  noDocument: t("fee.noDocument"),
+                  unregistered: t("fee.unregistered"),
+                  total: t("fee.total"),
+                  disallowedTotal: t("fee.disallowedTotal"),
+                  empty: t("fee.empty"),
+                }}
+              />
+            </div>
+          </div>
 
           <div className="space-y-3">
             {[

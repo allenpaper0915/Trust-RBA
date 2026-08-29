@@ -22,7 +22,8 @@ import {
   type ReviewDecision,
 } from "@/data/cases";
 import { assessCase, engineNote, scoreDisclaimer } from "@/lib/risk-engine";
-import { benchmarkFor } from "@/lib/analysis";
+import { assessFeeChain, benchmarkFor } from "@/lib/analysis";
+import { FeeChain } from "@/components/fee-chain";
 import { usePlatform } from "@/components/platform-store";
 import { WorkflowNav, PageHeader } from "@/components/page-header";
 import { StatusPill } from "@/components/status-pill";
@@ -78,6 +79,7 @@ function CaseDetail() {
   const base = benchmarkFor(record.origin);
   const delta = base > 0 ? Math.round(((record.fee - base) / base) * 100) : 0;
   const meta = statusMeta[record.state];
+  const chain = assessFeeChain(record.feeItems);
   const events = caseEvents(record.id);
   const decided = Boolean(record.review);
 
@@ -129,14 +131,8 @@ function CaseDetail() {
         <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {[
             { k: "仲介／合約聲明", v: money(record.agencyClaim), conflict: true },
-            { k: "移工申報", v: money(record.fee), conflict: false },
-            {
-              k: "文件可佐證金額",
-              v: record.docs.some((d) => d.ocrAmount)
-                ? money(record.docs.reduce((s, d) => s + (d.ocrAmount ?? 0), 0))
-                : "未取得",
-              conflict: false,
-            },
+            { k: "移工實付合計", v: money(record.fee), conflict: false },
+            { k: "RBA 不得由移工負擔", v: money(chain.disallowed), conflict: true },
             { k: "走廊基準", v: money(base), conflict: false },
           ].map((c) => (
             <div
@@ -174,6 +170,69 @@ function CaseDetail() {
         </div>
       </section>
 
+      {/* 費用鏈 */}
+      <section className="card-surface p-8">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h2 className="text-base font-bold text-primary-deep">費用鏈</h2>
+            <p className="mt-1.5 text-sm text-muted-foreground">
+              招聘費被拆給 {chain.byVendor.length} 個收款方。單筆金額都不高，加總後才超出基準。
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {chain.undocumented > 0 && (
+              <StatusPill tone="warning">無憑證 {money(chain.undocumented)}</StatusPill>
+            )}
+            {chain.unregistered > 0 && (
+              <StatusPill tone="danger">名單外中間商 {money(chain.unregistered)}</StatusPill>
+            )}
+          </div>
+        </div>
+
+        <div className="mt-6 grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
+          <FeeChain items={record.feeItems} linkVendors />
+
+          <div className="rounded-lg border border-border bg-secondary p-6">
+            <h3 className="text-sm font-semibold text-primary-deep">依收款方彙總</h3>
+            <ul className="mt-4 space-y-4 border-t border-border pt-4">
+              {chain.byVendor.map((v) => (
+                <li key={v.key}>
+                  <div className="flex flex-wrap items-baseline justify-between gap-2 text-sm">
+                    {v.vendorId ? (
+                      <Link
+                        to="/vendors/$id"
+                        params={{ id: v.vendorId }}
+                        className="text-primary hover:underline"
+                      >
+                        {v.name}
+                      </Link>
+                    ) : (
+                      <span className="text-primary-deep">{v.name}</span>
+                    )}
+                    <span className="num text-primary-deep">{money(v.amount)}</span>
+                  </div>
+                  <div className="mt-0.5 text-xs text-muted-foreground">
+                    {v.typeLabel} · {v.categories.join("、")}
+                    {!v.registered && (
+                      <span className="ml-1.5 text-warning-foreground">· 不在合約名單上</span>
+                    )}
+                  </div>
+                </li>
+              ))}
+              {chain.byVendor.length === 0 && (
+                <li className="text-sm text-muted-foreground">此案件沒有費用明細。</li>
+              )}
+            </ul>
+            <Link
+              to="/vendors"
+              className="mt-5 inline-block border-t border-border pt-4 text-xs text-primary hover:underline"
+            >
+              查看中間商合規總表 →
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* 移工提交的文件（已去識別化） */}
       <section className="card-surface p-8">
         <div className="flex flex-wrap items-end justify-between gap-4">
@@ -183,9 +242,12 @@ function CaseDetail() {
               所有文件在離開移工端之前已完成去識別化，企業端看不到姓名、證件號、電話與帳號。
             </p>
           </div>
-          <StatusPill tone="success" dot={false}>
-            已遮蔽 {record.docs.reduce((s, d) => s + d.redactedCount, 0)} 個個資欄位
-          </StatusPill>
+          <div className="flex flex-wrap gap-2">
+            {record.identityVerified && <StatusPill tone="success">身分已核驗</StatusPill>}
+            <StatusPill tone="primary" dot={false}>
+              已遮蔽 {record.docs.reduce((s, d) => s + d.redactedCount, 0)} 個個資欄位
+            </StatusPill>
+          </div>
         </div>
 
         {record.docs.length === 0 ? (

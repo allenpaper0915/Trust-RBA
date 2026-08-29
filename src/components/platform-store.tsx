@@ -207,6 +207,8 @@ export function PlatformProvider({ children }: { children: ReactNode }) {
         docs: input.docs,
         assignee: "尚未指派",
         state: "pending_review",
+        feeItems: input.feeItems,
+        identityVerified: input.docs.some((d) => d.kind === "identity"),
         workerNote: input.note,
       };
       setCases((prev) => [record, ...prev]);

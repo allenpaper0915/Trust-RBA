@@ -3,7 +3,7 @@ export type DataSource = "real-benchmark" | "policy-knowledge" | "synthetic-ente
 export const sourceLabel: Record<DataSource, string> = {
   "real-benchmark": "Real-world Benchmark",
   "policy-knowledge": "Policy Knowledge Base",
-  "synthetic-enterprise": "Synthetic Enterprise Evidence",
+  "synthetic-enterprise": "示範企業資料",
 };
 
 export const money = (n: number) => `NT$${n.toLocaleString("en-US")}`;
@@ -199,7 +199,7 @@ export const caseSeeds: CaseSeed[] = [
   },
 ];
 
-/** Demo 主線案件 */
+/** 主線案件 */
 export const primaryCase: CaseSeed = caseSeeds[0]!;
 
 export function buildEvidenceChain(seed: CaseSeed): EvidenceNode[] {
@@ -560,16 +560,7 @@ export const revocationAuditLog = [
   },
 ];
 
-export const presentationSteps = [
-  "問題",
-  "移工申報",
-  "企業偵測",
-  "人工審核",
-  "改善返還",
-  "憑證與驗證",
-];
-
-/** 產品主線：判斷「上一步／下一步」與簡報模式進度。 */
+/** 主流程順序，用於頁面底部的「上一步／下一步」導引。 */
 export const workflowSteps = [
   { to: "/", title: "問題", step: 0, caption: "為什麼合規文件不等於合規事實" },
   { to: "/worker", title: "移工申報", step: 1, caption: "移工端：免帳號、多語言的申報入口" },
@@ -578,6 +569,7 @@ export const workflowSteps = [
   { to: "/verification", title: "企業偵測", step: 2, caption: "AI 驗證中心" },
   { to: "/evidence", title: "企業偵測", step: 2, caption: "證據鏈與交叉驗證" },
   { to: "/cases", title: "人工審核", step: 3, caption: "案件審核佇列" },
+  { to: "/vendors", title: "人工審核", step: 3, caption: "中間商合規總表" },
   { to: `/cases/${primaryCase.id}`, title: "人工審核", step: 3, caption: "AI 判斷依據與審核決定" },
   { to: "/remediation", title: "改善返還", step: 4, caption: "返還追蹤與改善步驟" },
   { to: "/credential", title: "憑證與驗證", step: 5, caption: "RBA 合規憑證" },

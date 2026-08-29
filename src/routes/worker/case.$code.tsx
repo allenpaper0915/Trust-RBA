@@ -14,7 +14,9 @@ import {
 
 import { usePlatform, useT } from "@/components/platform-store";
 import { statusMeta, docKindMeta, type CaseDoc } from "@/data/cases";
+import { FeeChain } from "@/components/fee-chain";
 import { BigButton } from "@/components/worker-shell";
+import { assessFeeChain } from "@/lib/analysis";
 import { StatusPill } from "@/components/status-pill";
 import { assessCase } from "@/lib/risk-engine";
 import { benchmarkFor, guessDocKind } from "@/lib/analysis";
@@ -81,7 +83,9 @@ function WorkerCase() {
   const base = benchmarkFor(record.origin);
   const over = Math.max(0, record.fee - base);
   const deltaPercent = base > 0 ? Math.round((over / base) * 100) : 0;
-  const suspected = over > 0 && deltaPercent >= 15;
+  const chain = assessFeeChain(record.feeItems);
+  // 兩條線：高於國際基準，或有 RBA 明文不該由移工負擔的費用。
+  const suspected = deltaPercent >= 15 || chain.disallowed > 0;
   const max = Math.max(record.fee, base);
   const meta = statusMeta[record.state];
 
@@ -147,6 +151,11 @@ function WorkerCase() {
       >
         <div className="text-xs tracking-wider text-muted-foreground">{t("res.status")}</div>
         <div className="mt-1.5 text-lg font-bold text-primary-deep">{t(`st.${record.state}`)}</div>
+        {record.identityVerified && (
+          <div className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-success/30 bg-card px-3 py-1 text-xs text-success">
+            <Check className="size-3.5" /> {t("res.identityOk")}
+          </div>
+        )}
         {record.review?.refund ? (
           <div className="mt-3 text-sm text-primary-deep">
             {t("res.overchargeAmount")}：
@@ -194,12 +203,39 @@ function WorkerCase() {
         </div>
 
         {suspected && (
-          <div className="mt-6 rounded-md border border-danger/25 bg-danger-soft px-4 py-3">
-            <div className="text-xs text-muted-foreground">{t("res.overchargeAmount")}</div>
-            <div className="num mt-1 text-2xl text-danger">{money(over)}</div>
+          <div className="mt-6 grid gap-3 sm:grid-cols-2">
+            <div className="rounded-md border border-danger/25 bg-danger-soft px-4 py-3">
+              <div className="text-xs text-muted-foreground">{t("fee.disallowedTotal")}</div>
+              <div className="num mt-1 text-2xl text-danger">{money(chain.disallowed)}</div>
+            </div>
+            <div className="rounded-md border border-border bg-secondary px-4 py-3">
+              <div className="text-xs text-muted-foreground">{t("res.overchargeAmount")}</div>
+              <div className="num mt-1 text-2xl text-primary-deep">{money(over)}</div>
+            </div>
           </div>
         )}
         <p className="mt-4 text-xs leading-relaxed text-muted-foreground">{t("res.estimate")}</p>
+      </section>
+
+      {/* 費用鏈 */}
+      <section className="card-surface p-6">
+        <h2 className="text-base font-bold text-primary-deep">{t("fee.chainTitle")}</h2>
+        <div className="mt-5">
+          <FeeChain
+            items={record.feeItems}
+            categoryLabel={(c) => t(`cat.${c}`)}
+            text={{
+              payee: t("fee.payee"),
+              notAllowed: t("fee.notAllowed"),
+              allowed: t("fee.allowed"),
+              noDocument: t("fee.noDocument"),
+              unregistered: t("fee.unregistered"),
+              total: t("fee.total"),
+              disallowedTotal: t("fee.disallowedTotal"),
+              empty: t("fee.empty"),
+            }}
+          />
+        </div>
       </section>
 
       {/* 證據完整度 */}

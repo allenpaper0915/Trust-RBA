@@ -32,7 +32,7 @@ export function PageHeader({
   );
 }
 
-/** Demo 主線的上一步／下一步，讓錄影時不需要回到 sidebar 找頁面。 */
+/** 主流程的上一步／下一步導引。 */
 export function WorkflowNav({ current }: { current: string }) {
   const i = workflowSteps.findIndex((s) => s.to === current);
   if (i < 0) return null;
@@ -75,7 +75,7 @@ export function WorkflowNav({ current }: { current: string }) {
   );
 }
 
-/** 資料來源標籤：清楚區分真實基準與 Demo 合成資料。 */
+/** 資料來源標籤：清楚區分真實基準與示範資料。 */
 export function SourceTag({
   kind,
   className,
@@ -90,7 +90,7 @@ export function SourceTag({
       cls: "border-border-strong bg-secondary text-secondary-foreground",
     },
     synthetic: {
-      label: "Synthetic Enterprise Evidence",
+      label: "示範企業資料",
       cls: "border-border bg-muted text-muted-foreground",
     },
   }[kind];

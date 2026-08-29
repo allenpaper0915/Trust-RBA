@@ -25,7 +25,7 @@ export const Route = createFileRoute("/audit")({
   component: AuditPage,
 });
 
-/** §34 可信 AI 的八項要求，並標示在 Demo 的哪一頁被實際展示。 */
+/** 可信 AI 的八項要求，並標示在平台的哪一頁被實際落實。 */
 const requirements: { title: string; body: string; to: string; where: string }[] = [
   {
     title: "Evidence First",

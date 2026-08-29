@@ -125,7 +125,7 @@ export function ReceiptDocument({
         </dl>
         <div className="mt-6 flex items-center justify-between border-t border-border pt-4">
           <StatusPill tone="success">{verifiedBy}</StatusPill>
-          <span className="text-[11px] text-muted-foreground">Synthetic Demo Document</span>
+          <span className="text-[11px] text-muted-foreground">示範文件</span>
         </div>
       </div>
     </figure>

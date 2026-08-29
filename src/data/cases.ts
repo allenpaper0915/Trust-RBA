@@ -9,13 +9,28 @@
 
 import type { CaseSeed, EvidenceKey } from "@/data/compliance";
 import { caseSeeds } from "@/data/compliance";
+import type { FeeCategory } from "@/data/vendors";
 
 export type CaseStatus =
   "pending_review" | "investigating" | "need_more" | "confirmed" | "dismissed" | "remediated";
 
 export type CaseSource = "worker" | "audit";
 
-export type DocKind = "receipt" | "contract" | "payslip" | "transfer" | "message" | "other";
+export type DocKind =
+  "identity" | "offer" | "receipt" | "contract" | "payslip" | "transfer" | "message" | "other";
+
+/** 費用鏈的一筆付款：付給誰、為了什麼、有沒有憑證。 */
+export type FeeItem = {
+  id: string;
+  category: FeeCategory;
+  /** 移工填寫的收款方名稱 */
+  payee: string;
+  /** 比對到企業合約名單時的中間商 id；比對不到代表是名單外的次級中間商 */
+  vendorId?: string | undefined;
+  /** 新台幣 */
+  amount: number;
+  hasDocument: boolean;
+};
 
 export type CaseDoc = {
   id: string;
@@ -51,6 +66,10 @@ export type CaseRecord = CaseSeed & {
   docs: CaseDoc[];
   assignee: string;
   state: CaseStatus;
+  /** 費用鏈：招聘費被拆給哪幾家中間商 */
+  feeItems: FeeItem[];
+  /** 身分證明是否已核驗（企業只看得到這個布林值，看不到證件） */
+  identityVerified: boolean;
   review?: ReviewRecord;
   /** 移工自己補充的說明（已去識別化） */
   workerNote?: string;
@@ -96,7 +115,25 @@ export const decisionMeta: Record<
   },
 };
 
-export const docKindMeta: Record<DocKind, { label: string; hint: string; weight: EvidenceKey }> = {
+/**
+ * `weight` 為 null 代表這份文件不加計費用證據分數：
+ * 身分證明用來確認申報人確實是這批移工，聘僱文件用來確認僱用關係，
+ * 兩者都不能證明「付了多少錢」。
+ */
+export const docKindMeta: Record<
+  DocKind,
+  { label: string; hint: string; weight: EvidenceKey | null }
+> = {
+  identity: {
+    label: "身分證明",
+    hint: "護照或居留證。上傳後會遮蔽姓名與證件號，企業只會看到「已核驗」。",
+    weight: null,
+  },
+  offer: {
+    label: "聘僱文件",
+    hint: "錄取通知、勞動契約，用來確認你的雇主與職務。",
+    weight: "agency",
+  },
   receipt: { label: "付款收據", hint: "仲介或訓練中心開立的收據、明細", weight: "receipt" },
   transfer: { label: "匯款／轉帳紀錄", hint: "銀行、郵局或匯款公司的轉帳單", weight: "payment" },
   contract: { label: "仲介合約", hint: "服務契約、費用同意書", weight: "agency" },
@@ -116,7 +153,254 @@ export const reviewers = [
   "Nguyen Thi Mai（越南語專員）",
 ];
 
-type Meta = Omit<CaseRecord, keyof CaseSeed>;
+/**
+ * 各案件的費用鏈。刻意讓每一筆單獨看都「不算離譜」，
+ * 加總後才超出走廊基準——這是單一份仲介聲明查不出來的樣態。
+ */
+const feeChains: Record<string, FeeItem[]> = {
+  "2026-024": [
+    {
+      id: "F-024-1",
+      category: "agency_service",
+      payee: "ABC Recruitment Agency",
+      vendorId: "V-ABC",
+      amount: 28000,
+      hasDocument: true,
+    },
+    {
+      id: "F-024-2",
+      category: "agency_service",
+      payee: "Nam Viet Manpower",
+      vendorId: "V-NAMVIET",
+      amount: 15000,
+      hasDocument: true,
+    },
+    {
+      id: "F-024-3",
+      category: "training",
+      payee: "Viet Skill Training Center",
+      vendorId: "V-VTRAIN",
+      amount: 9000,
+      hasDocument: true,
+    },
+    {
+      id: "F-024-4",
+      category: "medical",
+      payee: "Saigon Health Check",
+      vendorId: "V-HEALTH",
+      amount: 3500,
+      hasDocument: false,
+    },
+    {
+      id: "F-024-5",
+      category: "airfare",
+      payee: "Truong Travel",
+      amount: 3000,
+      hasDocument: false,
+    },
+    {
+      id: "F-024-6",
+      category: "document",
+      payee: "越南外交部（護照規費）",
+      amount: 1500,
+      hasDocument: true,
+    },
+  ],
+  "2026-031": [
+    {
+      id: "F-031-1",
+      category: "agency_service",
+      payee: "ABC Recruitment Agency",
+      vendorId: "V-ABC",
+      amount: 25000,
+      hasDocument: true,
+    },
+    {
+      id: "F-031-2",
+      category: "agency_service",
+      payee: "Nam Viet Manpower",
+      vendorId: "V-NAMVIET",
+      amount: 18000,
+      hasDocument: true,
+    },
+    {
+      id: "F-031-3",
+      category: "training",
+      payee: "Viet Skill Training Center",
+      vendorId: "V-VTRAIN",
+      amount: 8000,
+      hasDocument: true,
+    },
+    {
+      id: "F-031-4",
+      category: "medical",
+      payee: "Saigon Health Check",
+      vendorId: "V-HEALTH",
+      amount: 2500,
+      hasDocument: false,
+    },
+    {
+      id: "F-031-5",
+      category: "document",
+      payee: "越南外交部（護照規費）",
+      amount: 1500,
+      hasDocument: true,
+    },
+  ],
+  "2026-047": [
+    {
+      id: "F-047-1",
+      category: "agency_service",
+      payee: "Nam Viet Manpower",
+      vendorId: "V-NAMVIET",
+      amount: 30000,
+      hasDocument: true,
+    },
+    {
+      id: "F-047-2",
+      category: "training",
+      payee: "Viet Skill Training Center",
+      vendorId: "V-VTRAIN",
+      amount: 12000,
+      hasDocument: false,
+    },
+    {
+      id: "F-047-3",
+      category: "medical",
+      payee: "Saigon Health Check",
+      vendorId: "V-HEALTH",
+      amount: 4000,
+      hasDocument: false,
+    },
+    {
+      id: "F-047-4",
+      category: "document",
+      payee: "越南外交部（護照規費）",
+      amount: 2000,
+      hasDocument: true,
+    },
+  ],
+  "2026-088": [
+    {
+      id: "F-088-1",
+      category: "agency_service",
+      payee: "Sentosa Placement",
+      vendorId: "V-SENTOSA",
+      amount: 24000,
+      hasDocument: true,
+    },
+    {
+      id: "F-088-2",
+      category: "training",
+      payee: "Sentosa Placement",
+      vendorId: "V-SENTOSA",
+      amount: 9000,
+      hasDocument: false,
+    },
+    {
+      id: "F-088-3",
+      category: "medical",
+      payee: "Sentosa Placement",
+      vendorId: "V-SENTOSA",
+      amount: 3500,
+      hasDocument: false,
+    },
+    {
+      id: "F-088-4",
+      category: "document",
+      payee: "印尼移民局（護照規費）",
+      amount: 1500,
+      hasDocument: true,
+    },
+  ],
+  "2026-119": [
+    {
+      id: "F-119-1",
+      category: "agency_service",
+      payee: "ABC Recruitment Agency",
+      vendorId: "V-ABC",
+      amount: 26000,
+      hasDocument: false,
+    },
+    {
+      id: "F-119-2",
+      category: "agency_service",
+      payee: "Nam Viet Manpower",
+      vendorId: "V-NAMVIET",
+      amount: 12000,
+      hasDocument: false,
+    },
+    {
+      id: "F-119-3",
+      category: "training",
+      payee: "Viet Skill Training Center",
+      vendorId: "V-VTRAIN",
+      amount: 5000,
+      hasDocument: true,
+    },
+    {
+      id: "F-119-4",
+      category: "document",
+      payee: "越南外交部（護照規費）",
+      amount: 2000,
+      hasDocument: true,
+    },
+  ],
+  "2026-006": [
+    {
+      id: "F-006-1",
+      category: "document",
+      payee: "菲律賓外交部（護照規費）",
+      amount: 1800,
+      hasDocument: true,
+    },
+    {
+      id: "F-006-2",
+      category: "document",
+      payee: "駐台北馬尼拉經濟文化辦事處（簽證規費）",
+      amount: 2500,
+      hasDocument: true,
+    },
+  ],
+  "2026-012": [
+    {
+      id: "F-012-1",
+      category: "agency_service",
+      payee: "Sentosa Placement",
+      vendorId: "V-SENTOSA",
+      amount: 30000,
+      hasDocument: true,
+    },
+    {
+      id: "F-012-2",
+      category: "training",
+      payee: "Sentosa Placement",
+      vendorId: "V-SENTOSA",
+      amount: 14000,
+      hasDocument: true,
+    },
+    {
+      id: "F-012-3",
+      category: "medical",
+      payee: "Sentosa Placement",
+      vendorId: "V-SENTOSA",
+      amount: 5000,
+      hasDocument: true,
+    },
+    {
+      id: "F-012-4",
+      category: "document",
+      payee: "印尼移民局（護照規費）",
+      amount: 3000,
+      hasDocument: true,
+    },
+  ],
+};
+
+/** 哪些案件已完成身分核驗（企業只看到布林值，看不到證件本身）。 */
+const identityVerifiedIds = new Set(["2026-024", "2026-031", "2026-119", "2026-006", "2026-012"]);
+
+type Meta = Omit<CaseRecord, keyof CaseSeed | "feeItems" | "identityVerified">;
 
 const metaById: Record<string, Meta> = {
   "2026-024": {
@@ -266,16 +550,16 @@ const metaById: Record<string, Meta> = {
   },
 };
 
-/** 已結案的案件，讓 Demo 一開始就像一個運作中的系統，而不是空平台。 */
-const extraSeeds: CaseRecord[] = [
+/** 已結案的案件，讓平台一開始就像一個運作中的系統，而不是空資料庫。 */
+const extraSeeds: Omit<CaseRecord, "feeItems" | "identityVerified">[] = [
   {
     id: "2026-006",
     worker: "匿名申報人 #206",
     origin: "菲律賓",
     workplace: "台灣",
     agency: "Manila Bridge Placement",
-    fee: 16800,
-    agencyClaim: 16500,
+    fee: 4300,
+    agencyClaim: 4300,
     date: "2025 / 12 / 08",
     language: "英語",
     present: ["agency", "interview", "receipt", "payment"],
@@ -290,10 +574,11 @@ const extraSeeds: CaseRecord[] = [
     paymentMethod: "銀行轉帳",
     assignee: reviewers[1]!,
     state: "dismissed",
-    workerReply: "經查證後，您支付的費用屬於當地法規允許的機票與體檢費用，未超出基準。",
+    workerReply:
+      "經查證後，您支付的兩筆都是護照與簽證規費，屬個人證件費用，仲介費、體檢費與機票均由雇主負擔，未構成不當收費。",
     review: {
       decision: "dismissed",
-      note: "文件金額與合約一致，且屬 RBA 允許由工人負擔的項目，未構成招聘費違規。",
+      note: "兩筆皆為政府規費且有正式收據；仲介服務費、體檢與機票由雇主支付，符合 Employer Pays Principle。",
       reviewer: reviewers[1]!,
       at: "2025 / 12 / 15 14:02",
     },
@@ -304,7 +589,7 @@ const extraSeeds: CaseRecord[] = [
         name: "medical_and_ticket.pdf",
         size: 260_000,
         uploadedAt: "2025 / 12 / 09",
-        ocrAmount: 16800,
+        ocrAmount: 4300,
         redactedCount: 3,
         status: "verified",
       },
@@ -367,6 +652,15 @@ const extraSeeds: CaseRecord[] = [
 
 /** 平台初始案件：既有稽核案件 + 已經進來的移工申報。 */
 export const seedCases: CaseRecord[] = [
-  ...caseSeeds.map((seed) => ({ ...seed, ...(metaById[seed.id] as Meta) })),
-  ...extraSeeds,
+  ...caseSeeds.map((seed) => ({
+    ...seed,
+    ...(metaById[seed.id] as Meta),
+    feeItems: feeChains[seed.id] ?? [],
+    identityVerified: identityVerifiedIds.has(seed.id),
+  })),
+  ...extraSeeds.map((c) => ({
+    ...c,
+    feeItems: feeChains[c.id] ?? [],
+    identityVerified: identityVerifiedIds.has(c.id),
+  })),
 ];

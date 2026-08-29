@@ -5,18 +5,17 @@ import {
   Layers,
   BadgeCheck,
   ScrollText,
-  Clapperboard,
-  Presentation,
   RotateCcw,
   ShieldCheck,
   Wrench,
   Users,
   Inbox,
+  Building,
 } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
-import { workflowSteps, enterprise, presentationSteps } from "@/data/compliance";
+import { enterprise } from "@/data/compliance";
 import { useSession } from "@/components/session-state";
 import { usePlatform } from "@/components/platform-store";
 import { WorkerShell } from "@/components/worker-shell";
@@ -28,6 +27,7 @@ const nav = [
     group: "審核作業",
     items: [
       { to: "/cases", label: "案件審核佇列", icon: Inbox },
+      { to: "/vendors", label: "中間商合規", icon: Building },
       { to: "/remediation", label: "改善與返還", icon: Wrench },
     ],
   },
@@ -77,7 +77,7 @@ function Sidebar() {
                       className={cn(
                         "flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm transition-colors",
                         active
-                          ? "bg-sidebar-primary text-sidebar-primary-foreground font-medium"
+                          ? "bg-sidebar-primary font-medium text-sidebar-primary-foreground"
                           : "text-sidebar-foreground/85 hover:bg-sidebar-accent",
                       )}
                     >
@@ -132,24 +132,17 @@ function Sidebar() {
 }
 
 function TopBar() {
-  const { demoMode, presentation, toggleDemoMode, togglePresentation, resetDemo } = useSession();
+  const { resetSession } = useSession();
   const { resetPlatform, cases } = usePlatform();
   const pending = cases.filter((c) => c.state === "pending_review").length;
 
   return (
     <header className="sticky top-0 z-20 flex h-14 items-center justify-between gap-4 border-b border-border bg-background/95 px-8 backdrop-blur">
       <div className="flex items-center gap-3 text-xs text-muted-foreground">
-        <span className="rounded border border-border bg-card px-2 py-1">
-          示範企業｜Synthetic Enterprise Data
-        </span>
+        <span>{enterprise.industry}</span>
         {pending > 0 && (
           <span className="rounded border border-warning/35 bg-warning-soft px-2 py-1 text-warning-foreground">
             {pending} 件待審核
-          </span>
-        )}
-        {demoMode && (
-          <span className="rounded border border-primary/25 bg-primary-soft px-2 py-1 text-primary">
-            Demo Environment
           </span>
         )}
       </div>
@@ -158,98 +151,29 @@ function TopBar() {
           to="/worker"
           className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-muted"
         >
-          <Users className="size-3.5" /> 切換到移工端
+          <Users className="size-3.5" /> 移工端
         </Link>
         <button
           onClick={() => {
-            resetDemo();
+            resetSession();
             resetPlatform();
           }}
+          title="把案件與稽核紀錄回復到初始狀態"
           className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-muted"
         >
-          <RotateCcw className="size-3.5" /> 重設 Demo
-        </button>
-        <button
-          onClick={toggleDemoMode}
-          className={cn(
-            "inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs transition-colors",
-            demoMode
-              ? "border-primary/30 bg-primary-soft text-primary"
-              : "border-border bg-card text-muted-foreground hover:bg-muted",
-          )}
-        >
-          <Clapperboard className="size-3.5" /> Demo Mode
-        </button>
-        <button
-          onClick={togglePresentation}
-          className={cn(
-            "inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs transition-colors",
-            presentation
-              ? "border-primary bg-primary text-primary-foreground"
-              : "border-border bg-card text-muted-foreground hover:bg-muted",
-          )}
-        >
-          <Presentation className="size-3.5" /> 簡報模式
+          <RotateCcw className="size-3.5" /> 重設資料
         </button>
       </div>
     </header>
   );
 }
 
-function PresentationBar() {
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
-  // 取最長匹配的 demo 步驟，讓子路由（例如 /cases/2026-024）也能對應正確階段。
-  const match = workflowSteps
-    .filter((s) => pathname === s.to || (s.to !== "/" && pathname.startsWith(s.to)))
-    .sort((a, b) => b.to.length - a.to.length)[0];
-  const activeIndex = match?.step ?? 0;
-
-  return (
-    <div className="border-b border-border bg-primary-deep px-8 py-3">
-      <ol className="flex flex-wrap items-center gap-2 text-sm text-white/60">
-        {presentationSteps.map((step, i) => (
-          <li key={step} className="flex items-center gap-2">
-            <span
-              className={cn(
-                "rounded px-2.5 py-1 transition-colors",
-                i === activeIndex ? "bg-white font-semibold text-primary-deep" : "",
-                i < activeIndex ? "text-white/80" : "",
-              )}
-            >
-              {step}
-            </span>
-            {i < presentationSteps.length - 1 && <span className="text-white/35">→</span>}
-          </li>
-        ))}
-      </ol>
-    </div>
-  );
-}
-
 export function AppShell({ children }: { children: ReactNode }) {
-  const { presentation, togglePresentation } = useSession();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   // 移工端有自己的外殼：單欄、大字、可切換語言。
   if (pathname.startsWith("/worker")) {
     return <WorkerShell>{children}</WorkerShell>;
-  }
-
-  if (presentation) {
-    return (
-      <div className="min-h-screen">
-        <PresentationBar />
-        <div className="flex justify-end px-8 pt-3">
-          <button
-            onClick={togglePresentation}
-            className="rounded-md border border-border bg-card px-3 py-1.5 text-xs text-muted-foreground hover:bg-muted"
-          >
-            離開簡報模式
-          </button>
-        </div>
-        <main className="mx-auto max-w-[1200px] px-8 py-8 text-[1.05rem]">{children}</main>
-      </div>
-    );
   }
 
   return (

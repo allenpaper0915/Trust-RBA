@@ -7,7 +7,8 @@
 
 import { benchmark } from "@/data/compliance";
 import type { EvidenceKey } from "@/data/compliance";
-import { docKindMeta, type CaseDoc, type DocKind } from "@/data/cases";
+import { docKindMeta, type CaseDoc, type DocKind, type FeeItem } from "@/data/cases";
+import { feeCategoryMeta, findVendor, vendorTypeLabel } from "@/data/vendors";
 import { assessCase } from "@/lib/risk-engine";
 import type { CaseSeed } from "@/data/compliance";
 
@@ -44,11 +45,98 @@ export function benchmarkFor(origin: string): number {
   return row?.benchmark ?? benchmark.benchmarkFee;
 }
 
-/** 文件類型 → 證據權重類型。 */
+/** 文件類型 → 證據權重類型。身分證明不計入費用證據。 */
 export function evidenceKeysFromDocs(docs: { kind: DocKind }[]): EvidenceKey[] {
   const keys = new Set<EvidenceKey>();
-  for (const d of docs) keys.add(docKindMeta[d.kind].weight);
+  for (const d of docs) {
+    const w = docKindMeta[d.kind].weight;
+    if (w) keys.add(w);
+  }
   return [...keys];
+}
+
+export type VendorBreakdown = {
+  key: string;
+  name: string;
+  vendorId?: string | undefined;
+  typeLabel: string;
+  registered: boolean;
+  amount: number;
+  disallowed: number;
+  categories: string[];
+};
+
+export type FeeChainResult = {
+  total: number;
+  /** RBA 規定不得由移工負擔、卻由移工支付的合計 */
+  disallowed: number;
+  /** 依當地法規可由移工負擔的合計（例如護照規費） */
+  allowed: number;
+  /** 沒有任何憑證的付款合計 */
+  undocumented: number;
+  /** 付給企業合約名單外中間商的合計 */
+  unregistered: number;
+  byVendor: VendorBreakdown[];
+};
+
+/**
+ * 拆解費用鏈：一次回答三個問題 ——
+ * 錢總共去了哪裡、哪幾筆依 RBA 不該由移工出、哪幾家是企業名單外的中間商。
+ */
+/**
+ * 是否為「付給中間商」的款項。
+ * 護照與簽證規費是繳給政府的，沒有對應的中間商，也不該被當成名單外廠商。
+ */
+function isVendorPayment(item: FeeItem): boolean {
+  return Boolean(item.vendorId) || !feeCategoryMeta[item.category].workerPayable;
+}
+
+export function assessFeeChain(items: FeeItem[]): FeeChainResult {
+  const byVendor = new Map<string, VendorBreakdown>();
+  let total = 0;
+  let disallowed = 0;
+  let allowed = 0;
+  let undocumented = 0;
+  let unregistered = 0;
+
+  for (const item of items) {
+    const meta = feeCategoryMeta[item.category];
+    const vendor = item.vendorId ? findVendor(item.vendorId) : undefined;
+    const isVendor = isVendorPayment(item);
+    // 政府規費視為「已知收款方」，只有查無登記的中間商才算名單外。
+    const registered = vendor ? vendor.registered : !isVendor;
+
+    total += item.amount;
+    if (meta.workerPayable) allowed += item.amount;
+    else disallowed += item.amount;
+    if (!item.hasDocument) undocumented += item.amount;
+    if (!registered) unregistered += item.amount;
+
+    const key = vendor?.id ?? item.payee;
+    const row = byVendor.get(key) ?? {
+      key,
+      name: vendor?.name ?? item.payee,
+      vendorId: vendor?.id,
+      typeLabel: vendor ? vendorTypeLabel[vendor.type] : isVendor ? "名單外／未登錄" : "政府規費",
+      registered,
+      amount: 0,
+      disallowed: 0,
+      categories: [],
+    };
+    row.amount += item.amount;
+    if (!meta.workerPayable) row.disallowed += item.amount;
+    if (!row.categories.includes(meta.label)) row.categories.push(meta.label);
+    byVendor.set(key, row);
+  }
+
+  return {
+    total,
+    disallowed,
+    allowed,
+    undocumented,
+    unregistered,
+    byVendor: [...byVendor.values()].sort((a, b) => b.amount - a.amount),
+  };
 }
 
 export type SubmissionInput = {
@@ -56,16 +144,18 @@ export type SubmissionInput = {
   workplace: string;
   agency: string;
   arrivedAt: string;
-  amount: number;
+  /** 移工填寫時使用的幣別，僅供顯示；feeItems 的金額一律已換算為新台幣 */
   currency: CurrencyCode;
   paymentMethod: string;
   note: string;
+  feeItems: FeeItem[];
   docs: CaseDoc[];
 };
 
 export type AnalysisResult = {
-  /** 換算後的實付金額（新台幣） */
+  /** 費用鏈加總後的實付金額（新台幣） */
   paid: number;
+  chain: FeeChainResult;
   /** 該走廊的基準 */
   benchmark: number;
   /** 高於基準的百分比，低於基準則為 0 */
@@ -92,11 +182,13 @@ export type AnalysisResult = {
  * 且該文件屬於可獨立佐證付款事實的類型。
  */
 export function analyse(input: SubmissionInput): AnalysisResult {
-  const paid = toTWD(input.amount, input.currency);
+  const chain = assessFeeChain(input.feeItems);
+  const paid = chain.total;
   const base = benchmarkFor(input.origin);
   const over = Math.max(0, paid - base);
   const deltaPercent = base > 0 ? Math.round((over / base) * 100) : 0;
-  const suspected = over > 0 && deltaPercent >= 15;
+  // 兩條獨立的判斷線：相對國際基準偏高，或有 RBA 明文不得由移工負擔的費用。
+  const suspected = deltaPercent >= 15 || chain.disallowed > 0;
 
   // 訪談＝移工自己的申報，永遠存在；仲介資料需有合約文件才算取得。
   const present: EvidenceKey[] = ["interview", ...evidenceKeysFromDocs(input.docs)];
@@ -134,6 +226,7 @@ export function analyse(input: SubmissionInput): AnalysisResult {
 
   return {
     paid,
+    chain,
     benchmark: base,
     deltaPercent,
     overcharge: over,

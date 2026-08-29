@@ -61,7 +61,7 @@ export function WorkerShell({ children }: { children: ReactNode }) {
             to="/dashboard"
             className="mt-3 inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary"
           >
-            <Building2 className="size-3.5" /> 企業合規平台（Demo 切換）
+            <Building2 className="size-3.5" /> 企業合規平台
           </Link>
         </div>
       </footer>

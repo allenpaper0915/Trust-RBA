@@ -5,7 +5,8 @@ import { ArrowRight, Info, Users } from "lucide-react";
 import { benchmark, enterprise, money } from "@/data/compliance";
 import { statusMeta } from "@/data/cases";
 import { assessCase } from "@/lib/risk-engine";
-import { benchmarkFor } from "@/lib/analysis";
+import { assessFeeChain, benchmarkFor } from "@/lib/analysis";
+import { vendorStats, vendorStatusMeta } from "@/lib/vendor-stats";
 import { usePlatform } from "@/components/platform-store";
 import { SectionHeading, StatusPill } from "@/components/status-pill";
 import { WorkflowNav } from "@/components/page-header";
@@ -41,22 +42,21 @@ function Dashboard() {
       (c) => assessCase(c).riskScore >= 60 && !["dismissed", "remediated"].includes(c.state),
     ).length;
     const score = Math.max(40, 100 - openHigh * 4);
-    return { pending, confirmed, refundTotal, outstanding, workerCases, score };
+    // RBA 的核心指標：不該由移工負擔、卻由移工付掉的錢總共有多少。
+    const disallowed = cases
+      .filter((c) => c.state !== "dismissed")
+      .reduce((s, c) => s + assessFeeChain(c.feeItems).disallowed, 0);
+    return { pending, confirmed, refundTotal, outstanding, workerCases, score, disallowed };
   }, [cases]);
 
-  /** 仲介風險排行：把散落的案件收斂成「該找誰談」。 */
-  const agencyRisk = useMemo(() => {
-    const map = new Map<string, { agency: string; count: number; over: number; risk: number }>();
-    for (const c of cases) {
-      const base = benchmarkFor(c.origin);
-      const row = map.get(c.agency) ?? { agency: c.agency, count: 0, over: 0, risk: 0 };
-      row.count += 1;
-      row.over += Math.max(0, c.fee - base);
-      row.risk = Math.max(row.risk, assessCase(c).riskScore);
-      map.set(c.agency, row);
-    }
-    return [...map.values()].sort((a, b) => b.over - a.over);
-  }, [cases]);
+  /** 中間商風險排行：把散落的案件收斂成「該找哪一家談」。 */
+  const topVendors = useMemo(
+    () =>
+      vendorStats(cases)
+        .filter((v) => v.disallowed > 0)
+        .slice(0, 5),
+    [cases],
+  );
 
   const recent = useMemo(
     () => [...cases].sort((a, b) => b.submittedAt.localeCompare(a.submittedAt)).slice(0, 5),
@@ -130,12 +130,15 @@ function Dashboard() {
           </div>
         </div>
 
-        <div className="card-surface p-6">
-          <div className="text-sm text-muted-foreground">已核定返還金額</div>
-          <div className="num mt-2 text-3xl text-primary-deep">{money(stats.refundTotal)}</div>
+        <div className="card-surface border-danger/25 p-6">
+          <div className="text-sm text-muted-foreground">不當收費曝險</div>
+          <div className="num mt-2 text-3xl text-danger">{money(stats.disallowed)}</div>
+          <div className="mt-2 text-xs text-muted-foreground">
+            已核定返還 {money(stats.refundTotal)}
+          </div>
           <Link
             to="/remediation"
-            className="mt-4 inline-block text-xs text-primary hover:underline"
+            className="mt-3 inline-block text-xs text-primary hover:underline"
           >
             改善與返還 →
           </Link>
@@ -189,30 +192,45 @@ function Dashboard() {
         </div>
 
         <div className="card-surface p-6">
-          <h2 className="text-base font-bold text-primary-deep">仲介風險排行</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-base font-bold text-primary-deep">中間商風險排行</h2>
+            <Link to="/vendors" className="text-xs text-primary hover:underline">
+              全部中間商 →
+            </Link>
+          </div>
           <p className="mt-1.5 text-sm text-muted-foreground">
-            以「高於基準的累計金額」排序，指出應優先約談的合作對象。
+            依「RBA 不得由移工負擔、卻由移工支付」的累計金額排序。
           </p>
           <ul className="mt-6 space-y-4 border-t border-border pt-5">
-            {agencyRisk.map((r) => (
-              <li key={r.agency}>
+            {topVendors.map((v) => (
+              <li key={v.vendor.id}>
                 <div className="flex items-baseline justify-between gap-3 text-sm">
-                  <span className="min-w-0 truncate text-primary-deep">{r.agency}</span>
-                  <span className="num shrink-0 text-danger">{money(r.over)}</span>
+                  <Link
+                    to="/vendors/$id"
+                    params={{ id: v.vendor.id }}
+                    className="min-w-0 truncate text-primary hover:underline"
+                  >
+                    {v.vendor.name}
+                  </Link>
+                  <span className="num shrink-0 text-danger">{money(v.disallowed)}</span>
                 </div>
                 <div className="mt-1.5 h-2 rounded bg-muted">
                   <div
                     className="h-2 rounded bg-danger"
                     style={{
-                      width: `${Math.round((r.over / Math.max(agencyRisk[0]?.over ?? 1, 1)) * 100)}%`,
+                      width: `${Math.round((v.disallowed / Math.max(topVendors[0]?.disallowed ?? 1, 1)) * 100)}%`,
                     }}
                   />
                 </div>
                 <div className="mt-1 text-[11px] text-muted-foreground">
-                  {r.count} 件 · 最高風險分數 {r.risk}
+                  {v.caseCount} 件 · {vendorStatusMeta[v.status].label}
+                  {!v.vendor.registered && " · 不在合約名單上"}
                 </div>
               </li>
             ))}
+            {topVendors.length === 0 && (
+              <li className="text-sm text-muted-foreground">目前沒有偵測到不當收費。</li>
+            )}
           </ul>
         </div>
       </section>

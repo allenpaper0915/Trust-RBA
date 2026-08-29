@@ -19,6 +19,8 @@ import { Route as VerificationRouteImport } from './routes/verification'
 import { Route as VerifyRouteImport } from './routes/verify'
 import { Route as CasesIndexRouteImport } from './routes/cases/index'
 import { Route as CasesIdRouteImport } from './routes/cases/$id'
+import { Route as VendorsIndexRouteImport } from './routes/vendors/index'
+import { Route as VendorsIdRouteImport } from './routes/vendors/$id'
 import { Route as WorkerIndexRouteImport } from './routes/worker/index'
 import { Route as WorkerSubmitRouteImport } from './routes/worker/submit'
 import { Route as WorkerCaseCodeRouteImport } from './routes/worker/case.$code'
@@ -73,6 +75,16 @@ const CasesIdRoute = CasesIdRouteImport.update({
   path: '/cases/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const VendorsIndexRoute = VendorsIndexRouteImport.update({
+  id: '/vendors/',
+  path: '/vendors/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VendorsIdRoute = VendorsIdRouteImport.update({
+  id: '/vendors/$id',
+  path: '/vendors/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const WorkerIndexRoute = WorkerIndexRouteImport.update({
   id: '/worker/',
   path: '/worker/',
@@ -99,8 +111,10 @@ export interface FileRoutesByFullPath {
   '/verification': typeof VerificationRoute
   '/verify': typeof VerifyRoute
   '/cases/$id': typeof CasesIdRoute
+  '/vendors/$id': typeof VendorsIdRoute
   '/worker/submit': typeof WorkerSubmitRoute
   '/cases/': typeof CasesIndexRoute
+  '/vendors/': typeof VendorsIndexRoute
   '/worker/': typeof WorkerIndexRoute
   '/worker/case/$code': typeof WorkerCaseCodeRoute
 }
@@ -114,8 +128,10 @@ export interface FileRoutesByTo {
   '/verification': typeof VerificationRoute
   '/verify': typeof VerifyRoute
   '/cases/$id': typeof CasesIdRoute
+  '/vendors/$id': typeof VendorsIdRoute
   '/worker/submit': typeof WorkerSubmitRoute
   '/cases': typeof CasesIndexRoute
+  '/vendors': typeof VendorsIndexRoute
   '/worker': typeof WorkerIndexRoute
   '/worker/case/$code': typeof WorkerCaseCodeRoute
 }
@@ -130,8 +146,10 @@ export interface FileRoutesById {
   '/verification': typeof VerificationRoute
   '/verify': typeof VerifyRoute
   '/cases/$id': typeof CasesIdRoute
+  '/vendors/$id': typeof VendorsIdRoute
   '/worker/submit': typeof WorkerSubmitRoute
   '/cases/': typeof CasesIndexRoute
+  '/vendors/': typeof VendorsIndexRoute
   '/worker/': typeof WorkerIndexRoute
   '/worker/case/$code': typeof WorkerCaseCodeRoute
 }
@@ -147,8 +165,10 @@ export interface FileRouteTypes {
     | '/verification'
     | '/verify'
     | '/cases/$id'
+    | '/vendors/$id'
     | '/worker/submit'
     | '/cases/'
+    | '/vendors/'
     | '/worker/'
     | '/worker/case/$code'
   fileRoutesByTo: FileRoutesByTo
@@ -162,8 +182,10 @@ export interface FileRouteTypes {
     | '/verification'
     | '/verify'
     | '/cases/$id'
+    | '/vendors/$id'
     | '/worker/submit'
     | '/cases'
+    | '/vendors'
     | '/worker'
     | '/worker/case/$code'
   id:
@@ -177,8 +199,10 @@ export interface FileRouteTypes {
     | '/verification'
     | '/verify'
     | '/cases/$id'
+    | '/vendors/$id'
     | '/worker/submit'
     | '/cases/'
+    | '/vendors/'
     | '/worker/'
     | '/worker/case/$code'
   fileRoutesById: FileRoutesById
@@ -193,8 +217,10 @@ export interface RootRouteChildren {
   VerificationRoute: typeof VerificationRoute
   VerifyRoute: typeof VerifyRoute
   CasesIdRoute: typeof CasesIdRoute
+  VendorsIdRoute: typeof VendorsIdRoute
   WorkerSubmitRoute: typeof WorkerSubmitRoute
   CasesIndexRoute: typeof CasesIndexRoute
+  VendorsIndexRoute: typeof VendorsIndexRoute
   WorkerIndexRoute: typeof WorkerIndexRoute
   WorkerCaseCodeRoute: typeof WorkerCaseCodeRoute
 }
@@ -271,6 +297,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CasesIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/vendors/': {
+      id: '/vendors/'
+      path: '/vendors'
+      fullPath: '/vendors/'
+      preLoaderRoute: typeof VendorsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/vendors/$id': {
+      id: '/vendors/$id'
+      path: '/vendors/$id'
+      fullPath: '/vendors/$id'
+      preLoaderRoute: typeof VendorsIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/worker/': {
       id: '/worker/'
       path: '/worker'
@@ -305,8 +345,10 @@ const rootRouteChildren: RootRouteChildren = {
   VerificationRoute: VerificationRoute,
   VerifyRoute: VerifyRoute,
   CasesIdRoute: CasesIdRoute,
+  VendorsIdRoute: VendorsIdRoute,
   WorkerSubmitRoute: WorkerSubmitRoute,
   CasesIndexRoute: CasesIndexRoute,
+  VendorsIndexRoute: VendorsIndexRoute,
   WorkerIndexRoute: WorkerIndexRoute,
   WorkerCaseCodeRoute: WorkerCaseCodeRoute,
 }
