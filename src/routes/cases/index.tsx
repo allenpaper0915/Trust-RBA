@@ -1,273 +1,281 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
-import { ChevronRight, Download, Search, Users, ClipboardList } from "lucide-react";
+import { useState } from "react";
+import {
+  AlertTriangle,
+  ArrowRight,
+  GitCompareArrows,
+  RadioTower,
+  RefreshCw,
+  UsersRound,
+} from "lucide-react";
 
-import { enterprise, money } from "@/data/compliance";
-import { statusMeta, type CaseStatus } from "@/data/cases";
-import { assessCase } from "@/lib/risk-engine";
-import { benchmarkFor } from "@/lib/analysis";
 import { usePlatform } from "@/components/platform-store";
-import { PageHeader } from "@/components/page-header";
 import { StatusPill } from "@/components/status-pill";
+import { statusMeta } from "@/data/cases";
+import {
+  conflictPatterns,
+  eventTypeTrends,
+  monitoringFor,
+  overviewSnapshot,
+  signalMeta,
+} from "@/data/monitoring";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/cases/")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    view: search["view"] === "conflicts" ? ("conflicts" as const) : ("events" as const),
+  }),
   head: () => ({
     meta: [
-      { title: "案件審核佇列｜TrustRBA" },
+      { title: "事件與衝突群組｜移工狀態雷達" },
       {
         name: "description",
-        content:
-          "移工申報與合規抽樣進入同一個審核佇列，依風險分數排序，每一件都必須由合規人員做出決定。",
+        content: "先從跨案件事件樣態辨識監理問題，再由有權承辦人按需展開去識別個案。",
       },
-      { property: "og:title", content: "案件審核佇列｜TrustRBA" },
-      { property: "og:description", content: "每一件高風險案件都必須經過人工審核才會結案。" },
     ],
   }),
-  component: CaseQueue,
+  component: EventGroups,
 });
 
-const stateFilters: { key: CaseStatus | "all"; label: string }[] = [
-  { key: "all", label: "全部" },
-  { key: "pending_review", label: statusMeta.pending_review.label },
-  { key: "investigating", label: statusMeta.investigating.label },
-  { key: "need_more", label: statusMeta.need_more.label },
-  { key: "confirmed", label: statusMeta.confirmed.label },
-  { key: "dismissed", label: statusMeta.dismissed.label },
-  { key: "remediated", label: statusMeta.remediated.label },
-];
+type GroupView = "conflict" | "event";
 
-function CaseQueue() {
+const conflictCaseMap = [["2026-031", "2026-088"], ["2026-024"], ["2026-047"], ["2026-119"]];
+
+const eventCaseMap: Record<string, string[]> = {
+  新聘僱許可: ["2026-024"],
+  轉換雇主申請: ["2026-031", "2026-088"],
+  投保異動: ["2026-024"],
+  雇主失聯通報: ["2026-031"],
+  移工本人回報: ["2026-047", "2026-119"],
+  其他依法通報: ["2026-119"],
+};
+
+function EventGroups() {
   const { cases } = usePlatform();
-  const [state, setState] = useState<CaseStatus | "all">("all");
-  const [source, setSource] = useState<"all" | "worker" | "audit">("all");
-  const [q, setQ] = useState("");
-  const [sort, setSort] = useState<"risk" | "recent" | "amount">("risk");
+  const { view: routeView } = Route.useSearch();
+  const view: GroupView = routeView === "conflicts" ? "conflict" : "event";
+  const [selectedIndex, setSelectedIndex] = useState(0);
 
-  const rows = useMemo(() => {
-    const term = q.trim().toLowerCase();
-    const filtered = cases.filter((c) => {
-      if (state !== "all" && c.state !== state) return false;
-      if (source !== "all" && c.source !== source) return false;
-      if (!term) return true;
-      return [c.id, c.agency, c.worker, c.origin, c.code ?? "", c.assignee]
-        .join(" ")
-        .toLowerCase()
-        .includes(term);
-    });
-    return filtered.sort((a, b) => {
-      if (sort === "amount") return b.fee - a.fee;
-      if (sort === "recent") return b.submittedAt.localeCompare(a.submittedAt);
-      return assessCase(b).riskScore - assessCase(a).riskScore;
-    });
-  }, [cases, state, source, q, sort]);
-
-  const counts = useMemo(() => {
-    const by = (s: CaseStatus) => cases.filter((c) => c.state === s).length;
-    return {
-      pending: by("pending_review"),
-      investigating: by("investigating"),
-      needMore: by("need_more"),
-      confirmed: by("confirmed") + by("remediated"),
-      fromWorker: cases.filter((c) => c.source === "worker").length,
-    };
-  }, [cases]);
-
-  /** 匯出目前篩選結果，讓合規人員可以帶進既有的稽核流程。 */
-  const exportCsv = () => {
-    const head = ["案件編號", "來源", "來源國", "仲介", "實付", "基準", "風險分數", "狀態", "指派"];
-    const body = rows.map((c) => [
-      c.id,
-      c.source === "worker" ? "移工申報" : "稽核抽樣",
-      c.origin,
-      c.agency,
-      c.fee,
-      benchmarkFor(c.origin),
-      assessCase(c).riskScore,
-      statusMeta[c.state].label,
-      c.assignee,
-    ]);
-    const csv = [head, ...body].map((r) => r.join(",")).join("\n");
-    const url = URL.createObjectURL(new Blob(["﻿" + csv], { type: "text/csv" }));
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `trustrba-cases-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
+  const groups = view === "conflict" ? conflictPatterns : eventTypeTrends;
+  const selected = groups[selectedIndex] ?? groups[0];
+  const selectedCaseIds =
+    view === "conflict"
+      ? (conflictCaseMap[selectedIndex] ?? [])
+      : (eventCaseMap[selected?.label ?? ""] ?? []);
+  const selectedCases = cases.filter((item) => selectedCaseIds.includes(item.id));
 
   return (
-    <div className="space-y-10">
-      <PageHeader
-        eyebrow="REVIEW QUEUE"
-        title="案件審核佇列"
-        subtitle={`${enterprise.name} · 移工申報與合規抽樣共用同一條審核流程`}
-        aside={
-          <button
-            onClick={exportCsv}
-            className="inline-flex items-center gap-2 rounded-md border border-border-strong bg-card px-4 py-2 text-sm text-primary-deep transition-colors hover:bg-muted"
-          >
-            <Download className="size-4" /> 匯出 CSV
-          </button>
-        }
-      />
-
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {[
-          { label: "待人工審核", value: counts.pending, tone: "text-warning-foreground" },
-          { label: "調查中", value: counts.investigating, tone: "text-primary" },
-          { label: "已確認不當收費", value: counts.confirmed, tone: "text-danger" },
-        ].map((c) => (
-          <div key={c.label} className="card-surface p-5">
-            <div className="text-xs text-muted-foreground">{c.label}</div>
-            <div className={cn("num mt-1.5 text-3xl", c.tone)}>{c.value}</div>
+    <div className="space-y-7">
+      <header className="flex flex-wrap items-end justify-between gap-5">
+        <div>
+          <div className="flex items-center gap-2 text-xs font-medium tracking-[0.16em] text-primary">
+            <GitCompareArrows className="size-4" /> EVENT & CONFLICT GROUPS
           </div>
-        ))}
-      </section>
+          <h1 className="mt-3 text-3xl font-bold tracking-tight text-primary-deep">
+            事件與衝突群組
+          </h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            從跨案件樣態理解哪些制度狀態正在形成證據衝突，再按需展開個案查證。
+          </p>
+          <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
+            <UsersRound className="size-3.5 text-primary" />
+            目前追蹤{" "}
+            <span className="num font-semibold text-primary-deep">
+              {overviewSnapshot.relationships.toLocaleString()}
+            </span>{" "}
+            個有效或程序中的聘僱關係
+          </div>
+        </div>
+        <div className="flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-xs text-muted-foreground">
+          <RefreshCw className="size-3.5" /> 最後同步 2026/08/30 10:42
+        </div>
+      </header>
 
-      {/* 篩選 */}
-      <section className="space-y-4">
-        <div className="flex flex-wrap items-center gap-2">
-          {stateFilters.map((f) => (
-            <button
-              key={f.key}
-              onClick={() => setState(f.key)}
+      <section className="card-surface overflow-hidden">
+        <header
+          className={cn(
+            "flex flex-wrap items-start justify-between gap-5 border-b px-7 py-6",
+            view === "conflict"
+              ? "border-danger/15 bg-danger-soft/45"
+              : "border-primary/15 bg-primary-soft/45",
+          )}
+        >
+          <div>
+            <div className="flex items-center gap-2 text-xs font-medium text-primary">
+              {view === "conflict" ? (
+                <GitCompareArrows className="size-4" />
+              ) : (
+                <RadioTower className="size-4" />
+              )}
+              從狀態總覽進入 · 目前檢視
+            </div>
+            <h2 className="mt-2 text-xl font-bold text-primary-deep">
+              {view === "conflict"
+                ? `${overviewSnapshot.conflicts} 項證據衝突，形成 ${conflictPatterns.length} 種樣態`
+                : `${overviewSnapshot.weeklyEvents} 項狀態事件，分為 ${eventTypeTrends.length} 種類型`}
+            </h2>
+            <p className="mt-1.5 text-xs text-muted-foreground">
+              {view === "conflict"
+                ? "選擇衝突樣態，查看判讀原則與可展開的去識別個案。"
+                : "選擇事件類型，查看系統如何追蹤後續義務與證據期限。"}
+            </p>
+          </div>
+          <div
+            className="grid shrink-0 grid-cols-2 rounded-lg border border-border/80 bg-card/55 p-1"
+            aria-label="檢視模式"
+          >
+            <Link
+              to="/cases"
+              search={{ view: "events" }}
+              onClick={() => setSelectedIndex(0)}
+              aria-current={view === "event" ? "page" : undefined}
               className={cn(
-                "rounded-full border px-3.5 py-1.5 text-xs transition-colors",
-                state === f.key
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border bg-card text-muted-foreground hover:bg-muted",
+                "inline-flex min-w-36 items-center justify-center gap-2 rounded-md border border-transparent px-3 py-2 text-xs font-medium transition-colors",
+                view === "event"
+                  ? "border-primary/20 bg-card text-primary shadow-sm"
+                  : "text-muted-foreground hover:bg-card/70 hover:text-primary-deep",
               )}
             >
-              {f.label}
-            </button>
-          ))}
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="relative min-w-[240px] flex-1">
-            <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-            <input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="搜尋案件編號、仲介、查詢碼或審核人"
-              className="w-full rounded-md border border-border bg-card py-2.5 pr-3 pl-9 text-sm outline-none focus:border-primary"
-            />
+              狀態事件
+              <span className="num font-semibold">{overviewSnapshot.weeklyEvents}</span>
+            </Link>
+            <Link
+              to="/cases"
+              search={{ view: "conflicts" }}
+              onClick={() => setSelectedIndex(0)}
+              aria-current={view === "conflict" ? "page" : undefined}
+              className={cn(
+                "inline-flex min-w-36 items-center justify-center gap-2 rounded-md border border-transparent px-3 py-2 text-xs font-medium transition-colors",
+                view === "conflict"
+                  ? "border-danger/20 bg-card text-danger shadow-sm"
+                  : "text-muted-foreground hover:bg-card/70 hover:text-primary-deep",
+              )}
+            >
+              證據衝突
+              <span className="num font-semibold">{overviewSnapshot.conflicts}</span>
+            </Link>
           </div>
-          <select
-            value={source}
-            onChange={(e) => setSource(e.target.value as typeof source)}
-            className="rounded-md border border-border bg-card px-3 py-2.5 text-sm text-primary-deep outline-none"
-          >
-            <option value="all">全部來源</option>
-            <option value="worker">移工自主申報</option>
-            <option value="audit">合規抽樣</option>
-          </select>
-          <select
-            value={sort}
-            onChange={(e) => setSort(e.target.value as typeof sort)}
-            className="rounded-md border border-border bg-card px-3 py-2.5 text-sm text-primary-deep outline-none"
-          >
-            <option value="risk">依風險分數排序</option>
-            <option value="recent">依申報時間排序</option>
-            <option value="amount">依金額排序</option>
-          </select>
-        </div>
-      </section>
+        </header>
 
-      <section className="card-surface overflow-x-auto">
-        <table className="w-full min-w-[1120px] text-sm">
-          <thead>
-            <tr className="border-b border-border bg-secondary text-left text-xs text-muted-foreground">
-              <th className="px-5 py-3.5 font-medium">案件</th>
-              <th className="px-5 py-3.5 font-medium">來源</th>
-              <th className="px-5 py-3.5 font-medium">來源國 / 仲介</th>
-              <th className="px-5 py-3.5 text-right font-medium">實付</th>
-              <th className="px-5 py-3.5 text-right font-medium">高於基準</th>
-              <th className="px-5 py-3.5 text-right font-medium">證據</th>
-              <th className="px-5 py-3.5 text-right font-medium">風險</th>
-              <th className="px-5 py-3.5 font-medium">狀態</th>
-              <th className="px-5 py-3.5 font-medium">指派</th>
-              <th className="px-5 py-3.5" />
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {rows.map((c) => {
-              const a = assessCase(c);
-              const base = benchmarkFor(c.origin);
-              const delta = base > 0 ? Math.round(((c.fee - base) / base) * 100) : 0;
-              const meta = statusMeta[c.state];
-              return (
-                <tr key={c.id} className="transition-colors hover:bg-muted">
-                  <td className="px-5 py-4">
-                    <Link
-                      to="/cases/$id"
-                      params={{ id: c.id }}
-                      className="num text-primary hover:underline"
-                    >
-                      #{c.id}
-                    </Link>
-                    <div className="text-xs text-muted-foreground">{c.worker}</div>
-                  </td>
-                  <td className="px-5 py-4">
-                    <span
-                      className={cn(
-                        "inline-flex items-center gap-1.5 rounded border px-2 py-0.5 text-[11px]",
-                        c.source === "worker"
-                          ? "border-primary/25 bg-primary-soft text-primary"
-                          : "border-border bg-muted text-muted-foreground",
-                      )}
-                    >
-                      {c.source === "worker" ? (
-                        <Users className="size-3" />
-                      ) : (
-                        <ClipboardList className="size-3" />
-                      )}
-                      {c.source === "worker" ? "移工申報" : "稽核抽樣"}
-                    </span>
-                    <div className="mt-1 text-[11px] text-muted-foreground">{c.submittedAt}</div>
-                  </td>
-                  <td className="px-5 py-4">
-                    <div className="text-primary-deep">
-                      {c.origin} → {c.workplace}
+        <div className="grid lg:grid-cols-[23rem_minmax(0,1fr)]">
+          <nav className="border-b border-border bg-secondary p-4 lg:border-r lg:border-b-0">
+            <div className="px-2 pb-3 text-xs text-muted-foreground">
+              {view === "conflict" ? "衝突樣態" : "事件類型"}
+            </div>
+            <div className="space-y-1.5">
+              {groups.map((group, index) => (
+                <button
+                  key={group.label}
+                  onClick={() => setSelectedIndex(index)}
+                  className={cn(
+                    "flex w-full items-center justify-between gap-4 rounded-md border border-transparent px-4 py-3.5 text-left transition-colors",
+                    selectedIndex === index
+                      ? view === "conflict"
+                        ? "border-danger/20 bg-danger-soft"
+                        : "border-primary/20 bg-primary-soft"
+                      : "hover:bg-card",
+                  )}
+                >
+                  <span className="text-sm font-medium leading-5 text-primary-deep">
+                    {group.label}
+                  </span>
+                  <span
+                    className={cn(
+                      "num shrink-0 text-xl font-semibold",
+                      view === "conflict" ? "text-danger" : "text-primary",
+                    )}
+                  >
+                    {group.count}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </nav>
+
+          {selected && (
+            <div className="min-w-0 p-6 lg:p-8">
+              <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                {view === "conflict" ? (
+                  <GitCompareArrows className="size-4 text-danger" />
+                ) : (
+                  <RadioTower className="size-4 text-primary" />
+                )}
+                已選{view === "conflict" ? "衝突樣態" : "事件類型"}
+              </div>
+              <h3 className="mt-3 text-2xl font-semibold text-primary-deep">{selected.label}</h3>
+              <p className="mt-3 max-w-3xl text-sm leading-6 text-muted-foreground">
+                {view === "conflict"
+                  ? "兩項各自成立的制度證據，在時間或狀態上無法同時解釋現況。這是要求查證的訊號，不是違法認定。"
+                  : "這類事件由既有申報或系統更新產生。系統追蹤後續義務與證據期限，只有形成衝突、逾期或資料缺口時才升級。"}
+              </p>
+              <section className="mt-6 border-t border-border pt-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <h4 className="font-semibold text-primary-deep">去識別個案</h4>
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      僅顯示判讀摘要，進入個案後才揭露證據鏈與原始文件。
                     </div>
-                    <div className="text-xs text-muted-foreground">{c.agency}</div>
-                  </td>
-                  <td className="num px-5 py-4 text-right text-primary-deep">{money(c.fee)}</td>
-                  <td className="num px-5 py-4 text-right">
-                    <span className={delta > 15 ? "text-danger" : "text-muted-foreground"}>
-                      {delta > 0 ? `+${delta}%` : "—"}
-                    </span>
-                  </td>
-                  <td className="num px-5 py-4 text-right text-muted-foreground">
-                    {a.evidenceScore}
-                  </td>
-                  <td className="num px-5 py-4 text-right">
-                    <span className={a.riskScore >= 60 ? "text-danger" : "text-primary-deep"}>
-                      {a.riskScore}
-                    </span>
-                  </td>
-                  <td className="px-5 py-4">
-                    <StatusPill tone={meta.tone}>{meta.short}</StatusPill>
-                  </td>
-                  <td className="px-5 py-4 text-xs text-muted-foreground">{c.assignee}</td>
-                  <td className="px-5 py-4 text-right">
-                    <Link to="/cases/$id" params={{ id: c.id }} aria-label={`檢視案件 ${c.id}`}>
-                      <ChevronRight className="size-4 text-muted-foreground" />
-                    </Link>
-                  </td>
-                </tr>
-              );
-            })}
-            {rows.length === 0 && (
-              <tr>
-                <td colSpan={10} className="px-5 py-12 text-center text-sm text-muted-foreground">
-                  沒有符合條件的案件。
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+                  </div>
+                  <span className="num shrink-0 text-sm font-semibold text-primary-deep">
+                    {selectedCases.length} 件
+                  </span>
+                </div>
+                <div className="mt-4 divide-y divide-border overflow-hidden rounded-lg border border-border">
+                  {selectedCases.map((item) => {
+                    const profile = monitoringFor(item);
+                    const signal = signalMeta[profile.tone];
+                    const state = statusMeta[item.state];
+                    return (
+                      <div
+                        key={item.id}
+                        className="grid items-center gap-4 px-5 py-4 xl:grid-cols-[1fr_9rem_8rem_auto]"
+                      >
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={cn("size-2.5 shrink-0 rounded-full", signal.dotClass)}
+                            />
+                            <span className="text-sm font-medium text-primary-deep">
+                              {profile.trigger}
+                            </span>
+                          </div>
+                          <div className="mt-1.5 text-xs text-muted-foreground">
+                            {item.origin}籍 · {item.workplace} ·{" "}
+                            {item.source === "worker" ? "本人回報" : "制度抽樣"}
+                          </div>
+                        </div>
+                        <div className="text-xs text-primary-deep">
+                          {signal.label.split("｜")[1]}
+                        </div>
+                        <StatusPill tone={state.tone}>{state.short}</StatusPill>
+                        <Link
+                          to="/cases/$id"
+                          params={{ id: item.id }}
+                          className="inline-flex items-center justify-end gap-1.5 text-sm font-medium text-primary hover:underline"
+                        >
+                          開啟個案 <ArrowRight className="size-4" />
+                        </Link>
+                      </div>
+                    );
+                  })}
+                  {selectedCases.length === 0 && (
+                    <div className="px-5 py-8 text-center text-sm text-muted-foreground">
+                      示範資料中沒有可展開個案。
+                    </div>
+                  )}
+                </div>
+              </section>
+            </div>
+          )}
+        </div>
+
+        <footer className="flex items-start gap-3 border-t border-border bg-muted/50 px-6 py-4">
+          <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning-foreground" />
+          <p className="text-xs leading-5 text-muted-foreground">
+            <strong className="font-medium text-primary-deep">判讀邊界：</strong>
+            Agent 只指出證據的不一致與缺口；是否調閱、訪查或排除異常，仍由有權承辦人決定。
+          </p>
+        </footer>
       </section>
     </div>
   );

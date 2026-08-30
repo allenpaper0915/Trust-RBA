@@ -15,10 +15,10 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/vendors/$id")({
   head: ({ params }) => ({
     meta: [
-      { title: `中間商 ${params.id}｜TrustRBA` },
+      { title: `仲介監理 ${params.id}｜移工狀態雷達` },
       {
         name: "description",
-        content: "單一中間商的收費項目、涉及案件、不當收費金額與對應的 RBA 條款。",
+        content: "單一仲介機構的跨案件異常樣態、證據信心與監理處置紀錄。",
       },
     ],
   }),
@@ -35,7 +35,7 @@ function VendorDetail() {
       <div className="space-y-6">
         <PageHeader title="找不到這家中間商" subtitle={`代號 ${id} 不存在。`} />
         <Link to="/vendors" className="text-sm text-primary hover:underline">
-          ← 回到中間商合規
+          ← 回到仲介監理
         </Link>
       </div>
     );
@@ -65,7 +65,7 @@ function VendorDetail() {
           to="/vendors"
           className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary"
         >
-          <ArrowLeft className="size-3.5" /> 中間商合規
+          <ArrowLeft className="size-3.5" /> 仲介監理
         </Link>
       </div>
 
@@ -74,8 +74,8 @@ function VendorDetail() {
         title={vendor.name}
         subtitle={
           vendor.registered
-            ? `合作起始 ${vendor.since}${vendor.workers > 0 ? ` · 目前在職移工 ${vendor.workers} 名` : ""}`
-            : "這家公司出現在移工的申報中，但不在企業的合約名單上。"
+            ? `登記／合作資料起始 ${vendor.since}${vendor.workers > 0 ? ` · 涉及移工 ${vendor.workers} 名` : ""}`
+            : "這個名稱出現在案件通報中，但尚未對應到政府登記資料。"
         }
         aside={<StatusPill tone={meta.tone}>{meta.label}</StatusPill>}
       />
@@ -84,12 +84,12 @@ function VendorDetail() {
         {[
           { k: "涉及案件", v: String(stat.caseCount) },
           { k: "未結案", v: String(stat.openCases) },
-          { k: "移工實付合計", v: money(stat.collected) },
-          { k: "不當收費合計", v: money(stat.disallowed), tone: "text-danger" },
+          { k: "涉及移工", v: String(vendor.workers) },
+          { k: "資料信心", v: stat.caseCount >= 2 ? "高" : stat.caseCount === 1 ? "中" : "低" },
         ].map((c) => (
           <div key={c.k} className="card-surface p-5">
             <div className="text-xs text-muted-foreground">{c.k}</div>
-            <div className={cn("num mt-1.5 text-2xl text-primary-deep", c.tone)}>{c.v}</div>
+            <div className="num mt-1.5 text-2xl text-primary-deep">{c.v}</div>
           </div>
         ))}
       </section>
@@ -97,7 +97,7 @@ function VendorDetail() {
       <section className="grid gap-6 lg:grid-cols-[1fr_1fr]">
         <div className="card-surface p-7">
           <h2 className="flex items-center gap-2 text-base font-bold text-primary-deep">
-            <Building className="size-4 text-primary" /> 收費項目分布
+            <Building className="size-4 text-primary" /> 跨案件異常樣態
           </h2>
           {categoryRows.length === 0 ? (
             <p className="mt-5 text-sm text-muted-foreground">目前沒有指向這家中間商的付款紀錄。</p>
@@ -125,19 +125,19 @@ function VendorDetail() {
           {stat.undocumented > 0 && (
             <p className="mt-5 rounded-md border border-warning/35 bg-warning-soft px-4 py-3 text-xs leading-relaxed text-warning-foreground">
               其中 <span className="num">{money(stat.undocumented)}</span>{" "}
-              沒有任何收據或匯款憑證，需要向這家中間商調閱紀錄。
+              沒有任何收據或匯款憑證，應由有權承辦人向關係人調閱紀錄。
             </p>
           )}
         </div>
 
         <div className="card-surface p-7">
           <h2 className="flex items-center gap-2 text-base font-bold text-primary-deep">
-            <ScrollText className="size-4 text-primary" /> 對應的 RBA 條款
+            <ScrollText className="size-4 text-primary" /> 監理判讀與限制
           </h2>
           <p className="mt-1.5 text-sm text-muted-foreground">{meta.detail}</p>
           {brokenRules.length === 0 ? (
             <p className="mt-5 border-t border-border pt-5 text-sm text-muted-foreground">
-              目前沒有違反 Employer Pays Principle 的收費項目。
+              目前沒有跨案件重複出現的異常收費項目，仍保留週期抽樣。
             </p>
           ) : (
             <ul className="mt-5 space-y-4 border-t border-border pt-5">
@@ -145,7 +145,8 @@ function VendorDetail() {
                 <li key={c}>
                   <div className="text-sm font-medium text-danger">{feeCategoryMeta[c].label}</div>
                   <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                    {feeCategoryMeta[c].rule}
+                    {feeCategoryMeta[c].rule}{" "}
+                    此處僅作為監理線索，行政認定仍須回到個案證據與適用法規。
                   </p>
                 </li>
               ))}
@@ -156,7 +157,7 @@ function VendorDetail() {
 
       <section className="card-surface overflow-hidden">
         <div className="border-b border-border px-6 py-4">
-          <h2 className="text-base font-bold text-primary-deep">涉及案件</h2>
+          <h2 className="text-base font-bold text-primary-deep">案件與證據基礎</h2>
         </div>
         {related.length === 0 ? (
           <p className="px-6 py-10 text-center text-sm text-muted-foreground">沒有相關案件。</p>
@@ -181,7 +182,7 @@ function VendorDetail() {
                       </div>
                     </div>
                     <div className="flex items-center gap-4">
-                      <span className="num text-sm text-primary-deep">{money(c.fee)}</span>
+                      <span className="text-xs text-muted-foreground">衝突優先序</span>
                       <StatusPill tone={a.tone}>{a.riskScore}</StatusPill>
                       <StatusPill tone={statusMeta[c.state].tone}>
                         {statusMeta[c.state].short}

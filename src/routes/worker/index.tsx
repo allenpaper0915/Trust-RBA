@@ -1,6 +1,15 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { ArrowRight, FileUp, Lock, Search, ShieldCheck } from "lucide-react";
+import {
+  ArrowRight,
+  CheckCircle2,
+  Clock3,
+  FileUp,
+  Lock,
+  Search,
+  ShieldCheck,
+  UserCheck,
+} from "lucide-react";
 
 import { BigButton, inputClass } from "@/components/worker-shell";
 import { usePlatform, useT } from "@/components/platform-store";
@@ -21,10 +30,29 @@ export const Route = createFileRoute("/worker/")({
 
 function WorkerHome() {
   const t = useT();
-  const { getByCode } = usePlatform();
+  const { events, getByCode, getCase, recordRoleEvent } = usePlatform();
   const navigate = useNavigate();
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
+  const demoCase = getCase("2026-031");
+  const confirmed = events.some(
+    (event) =>
+      event.caseId === "2026-031" &&
+      event.actor === "worker" &&
+      event.action === "本人回報轉換期間近況",
+  );
+
+  const confirmStatus = () => {
+    if (confirmed) return;
+    recordRoleEvent({
+      caseId: "2026-031",
+      actor: "worker",
+      action: "本人回報轉換期間近況",
+      evidence: "本人確認安全 · 正在等待新雇主承接 · 聯絡方式仍有效",
+      auth: "本人查詢碼與一次性驗證",
+      result: "已納入案件證據鏈，等待政府交叉確認",
+    });
+  };
 
   const lookup = (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,6 +79,57 @@ function WorkerHome() {
         </h1>
         <p className="mt-4 text-sm leading-loose text-muted-foreground">{t("portal.intro")}</p>
       </section>
+
+      {demoCase && (
+        <section className="overflow-hidden rounded-lg border border-primary/25 bg-card">
+          <header className="border-b border-primary/15 bg-primary-soft px-6 py-5">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2 text-xs font-medium text-primary">
+                  <Clock3 className="size-4" /> 我的聘僱程序
+                </div>
+                <h2 className="mt-2 text-lg font-bold text-primary-deep">轉換雇主確認中</h2>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  案件 {demoCase.id} · 政府正在比對轉換申請與原雇主通報
+                </p>
+              </div>
+              <span className="shrink-0 rounded-full border border-warning/30 bg-warning-soft px-3 py-1 text-xs text-warning-foreground">
+                等待確認
+              </span>
+            </div>
+          </header>
+          <div className="p-6">
+            <div className="flex items-start gap-3">
+              <UserCheck className="mt-0.5 size-5 shrink-0 text-primary" />
+              <div>
+                <div className="text-sm font-semibold text-primary-deep">系統需要你的近況</div>
+                <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                  確認本人安全與目前程序狀態，可協助政府判斷是否只是合法轉換期間的資料時間差。
+                </p>
+              </div>
+            </div>
+            <div className="mt-5 flex flex-wrap gap-3">
+              <button
+                onClick={confirmStatus}
+                disabled={confirmed}
+                className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground hover:bg-primary-deep disabled:cursor-default disabled:bg-success"
+              >
+                {confirmed && <CheckCircle2 className="size-4" />}
+                {confirmed ? "近況已送出" : "確認本人安全並送出近況"}
+              </button>
+              {demoCase.code && (
+                <Link
+                  to="/worker/case/$code"
+                  params={{ code: demoCase.code }}
+                  className="inline-flex items-center gap-2 rounded-lg border border-border-strong bg-card px-5 py-3 text-sm font-semibold text-primary-deep hover:bg-muted"
+                >
+                  查看我的案件 <ArrowRight className="size-4" />
+                </Link>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
 
       <section className="space-y-4">
         <Link

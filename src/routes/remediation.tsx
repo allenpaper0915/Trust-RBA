@@ -83,7 +83,11 @@ function Remediation() {
         <div className="card-surface p-7">
           <div className="text-sm text-muted-foreground">審核中案件的潛在返還</div>
           <div className="num mt-2 text-2xl text-primary-deep">{money(estimate)}</div>
-          <Link to="/cases" className="mt-3 inline-block text-xs text-primary hover:underline">
+          <Link
+            to="/cases"
+            search={{ view: "conflicts" }}
+            className="mt-3 inline-block text-xs text-primary hover:underline"
+          >
             以實付與基準差額估算，僅供參考 →
           </Link>
         </div>
@@ -99,7 +103,11 @@ function Remediation() {
         {refundCases.length === 0 ? (
           <p className="px-6 py-10 text-center text-sm text-muted-foreground">
             目前沒有已確認不當收費的案件。到
-            <Link to="/cases" className="mx-1 text-primary hover:underline">
+            <Link
+              to="/cases"
+              search={{ view: "conflicts" }}
+              className="mx-1 text-primary hover:underline"
+            >
               審核佇列
             </Link>
             完成審核後，案件會出現在這裡。

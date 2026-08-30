@@ -15,7 +15,7 @@ import type { AnalysisResult, SubmissionInput } from "@/lib/analysis";
 import { aliasFor, newLookupCode } from "@/lib/deidentify";
 import { translate } from "@/lib/i18n";
 
-export type EventActor = "worker" | "ai" | "reviewer" | "system";
+export type EventActor = "agency" | "enterprise" | "worker" | "ai" | "reviewer" | "system";
 
 export type PlatformEvent = {
   id: string;
@@ -28,7 +28,7 @@ export type PlatformEvent = {
   result: string;
 };
 
-export type Role = "enterprise" | "worker";
+export type Role = "government" | "agency" | "worker" | "enterprise";
 
 type PlatformState = {
   cases: CaseRecord[];
@@ -48,6 +48,7 @@ type PlatformState = {
     redactedCount: number,
   ) => CaseRecord;
   addDocs: (caseId: string, docs: CaseDoc[]) => void;
+  recordRoleEvent: (event: Omit<PlatformEvent, "id" | "at">) => void;
   decide: (
     caseId: string,
     args: { decision: ReviewDecision; note: string; refund?: number | undefined; reply: string },
@@ -106,9 +107,9 @@ function seedEvents(cases: CaseRecord[]): PlatformEvent[] {
         at: `${c.submittedAt} 09:12`,
         caseId: c.id,
         actor: "reviewer",
-        action: "合規抽樣建案",
+        action: "政府抽樣建案",
         evidence: `${c.agency} · ${c.origin} 來源國`,
-        auth: "年度稽核計畫",
+        auth: "年度監理抽樣計畫",
         result: "已建案",
       });
     }
@@ -117,10 +118,10 @@ function seedEvents(cases: CaseRecord[]): PlatformEvent[] {
       at: `${c.submittedAt} 09:13`,
       caseId: c.id,
       actor: "ai",
-      action: "基準比對與風險計分",
+      action: "證據比對與衝突優先序計算",
       evidence: `實付 NT$${c.fee.toLocaleString("en-US")}`,
       auth: "deterministic 權重表",
-      result: "送交人工審核",
+      result: "送交承辦人複核",
     });
     if (c.review) {
       out.push({
@@ -138,14 +139,16 @@ function seedEvents(cases: CaseRecord[]): PlatformEvent[] {
   return out;
 }
 
-type Persisted = { cases: CaseRecord[]; events: PlatformEvent[] };
+type Persisted = { cases: CaseRecord[]; events: PlatformEvent[]; role: Role; locale: Locale };
+
+const roles: Role[] = ["government", "agency", "worker", "enterprise"];
 
 export function PlatformProvider({ children }: { children: ReactNode }) {
   const [cases, setCases] = useState<CaseRecord[]>(seedCases);
   const [events, setEvents] = useState<PlatformEvent[]>(() => seedEvents(seedCases));
-  const [role, setRole] = useState<Role>("enterprise");
+  const [role, setRole] = useState<Role>("government");
   const [locale, setLocale] = useState<Locale>("zh");
-  const [reviewer, setReviewer] = useState("林郁婷（合規主管）");
+  const [reviewer, setReviewer] = useState("林郁婷（移工科股長）");
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
@@ -165,9 +168,10 @@ export function PlatformProvider({ children }: { children: ReactNode }) {
 
       const raw = window.localStorage.getItem(KEY);
       if (raw) {
-        const p = JSON.parse(raw) as Partial<Persisted> & { role?: Role; locale?: Locale };
+        const p = JSON.parse(raw) as Partial<Persisted>;
         if (Array.isArray(p.cases) && p.cases.length) setCases(p.cases);
         if (Array.isArray(p.events) && p.events.length) setEvents(p.events);
+        if (p.role && roles.includes(p.role)) setRole(p.role);
         if (p.locale) setLocale(p.locale);
       }
     } catch {
@@ -179,11 +183,11 @@ export function PlatformProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!hydrated) return;
     try {
-      window.localStorage.setItem(KEY, JSON.stringify({ cases, events, locale }));
+      window.localStorage.setItem(KEY, JSON.stringify({ cases, events, role, locale }));
     } catch {
       /* 儲存失敗不影響操作 */
     }
-  }, [cases, events, locale, hydrated]);
+  }, [cases, events, role, locale, hydrated]);
 
   const push = useCallback((e: Omit<PlatformEvent, "id" | "at"> & { at?: string }) => {
     setEvents((prev) => [
@@ -253,10 +257,10 @@ export function PlatformProvider({ children }: { children: ReactNode }) {
           at: stamp,
           caseId: id,
           actor: "ai",
-          action: "基準比對與風險計分",
+          action: "證據比對與衝突優先序計算",
           evidence: `實付 NT$${analysis.paid.toLocaleString("en-US")} / 基準 NT$${analysis.benchmark.toLocaleString("en-US")}`,
           auth: "deterministic 權重表",
-          result: `風險分數 ${analysis.riskScore}，送交人工審核`,
+          result: `衝突優先序 ${analysis.riskScore}，送交承辦人複核`,
         },
       ]);
       return record;
@@ -332,7 +336,7 @@ export function PlatformProvider({ children }: { children: ReactNode }) {
       push({
         caseId,
         actor: "reviewer",
-        action: "指派審核人",
+        action: "指派承辦人",
         evidence: to,
         auth: reviewer,
         result: "已指派",
@@ -349,10 +353,10 @@ export function PlatformProvider({ children }: { children: ReactNode }) {
       push({
         caseId,
         actor: "reviewer",
-        action: "確認返還完成",
-        evidence: "返還憑證已納入證據鏈",
+        action: "確認改善完成",
+        evidence: "改善或返還憑證已納入證據鏈",
         auth: reviewer,
-        result: "已完成返還",
+        result: "改善已完成",
       });
     },
     [push, reviewer],
@@ -379,6 +383,7 @@ export function PlatformProvider({ children }: { children: ReactNode }) {
       caseEvents: (id) => events.filter((e) => e.caseId === id),
       addSubmission,
       addDocs,
+      recordRoleEvent: push,
       decide,
       assign,
       markRemediated,
@@ -392,6 +397,7 @@ export function PlatformProvider({ children }: { children: ReactNode }) {
       reviewer,
       addSubmission,
       addDocs,
+      push,
       decide,
       assign,
       markRemediated,

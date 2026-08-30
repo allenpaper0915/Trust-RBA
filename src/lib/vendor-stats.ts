@@ -1,9 +1,8 @@
 /**
  * 中間商彙總。
  *
- * 企業真正要回答的問題不是「這位移工被收了多少」，而是
- * 「哪一家中間商在系統性地收錢」。把所有案件的費用鏈依收款方重新聚合，
- * 就能從個案跳到廠商層級。
+ * 政府監理不能只看單一案件，而要把案件依仲介重新聚合，
+ * 找出跨案件重複出現的樣態，決定訪查與抽樣優先序。
  */
 
 import type { CaseRecord } from "@/data/cases";
@@ -16,24 +15,24 @@ export const vendorStatusMeta: Record<
   { label: string; tone: "danger" | "warning" | "success" | "neutral"; detail: string }
 > = {
   violation: {
-    label: "確認違規",
+    label: "高監理優先",
     tone: "danger",
-    detail: "已有經人工審核確認的不當收費案件。",
+    detail: "已有經人工複核確認的異常案件，應檢視是否形成系統性樣態。",
   },
   watch: {
-    label: "調查中",
+    label: "持續觀察",
     tone: "warning",
-    detail: "有尚未結案的申報指向這家中間商。",
+    detail: "有尚未結案的衝突或通報指向這家仲介機構。",
   },
   clear: {
     label: "目前無異常",
     tone: "success",
-    detail: "沒有未結案的申報，或申報經審核後未成立。",
+    detail: "目前沒有未結案異常；仍保留週期與隨機抽樣。",
   },
   unlisted: {
-    label: "名單外",
+    label: "待確認登記",
     tone: "neutral",
-    detail: "移工申報中出現、但不在企業合約名單上的中間商。",
+    detail: "通報中出現、但尚未對應到政府登記資料的仲介或次級收款方。",
   },
 };
 

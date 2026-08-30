@@ -3,6 +3,7 @@ import { Building2, Globe, ShieldCheck } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { locales, type Locale } from "@/lib/i18n";
+import { DemoRoleSwitcher } from "@/components/demo-role-switcher";
 import { usePlatform, useT } from "@/components/platform-store";
 import { cn } from "@/lib/utils";
 
@@ -19,7 +20,7 @@ export function WorkerShell({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col bg-secondary">
       <header className="sticky top-0 z-20 border-b border-border bg-card/95 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-3xl items-center justify-between gap-4 px-5 py-3.5">
+        <div className="mx-auto flex w-full max-w-3xl flex-wrap items-center justify-between gap-3 px-5 py-3.5">
           <Link to="/worker" className="flex items-center gap-2.5">
             <ShieldCheck className="size-5 shrink-0 text-primary" />
             <span className="min-w-0">
@@ -32,21 +33,26 @@ export function WorkerShell({ children }: { children: ReactNode }) {
             </span>
           </Link>
 
-          <label className="flex items-center gap-1.5 rounded-md border border-border bg-card px-2 py-1.5">
-            <Globe className="size-3.5 shrink-0 text-muted-foreground" />
-            <span className="sr-only">Language</span>
-            <select
-              value={locale}
-              onChange={(e) => setLocale(e.target.value as Locale)}
-              className="bg-transparent text-xs text-primary-deep outline-none"
-            >
-              {locales.map((l) => (
-                <option key={l.code} value={l.code}>
-                  {l.native}
-                </option>
-              ))}
-            </select>
-          </label>
+          <div className="flex items-end gap-2">
+            <div className="w-36">
+              <DemoRoleSwitcher light />
+            </div>
+            <label className="flex items-center gap-1.5 rounded-md border border-border bg-card px-2 py-1.5">
+              <Globe className="size-3.5 shrink-0 text-muted-foreground" />
+              <span className="sr-only">Language</span>
+              <select
+                value={locale}
+                onChange={(e) => setLocale(e.target.value as Locale)}
+                className="bg-transparent text-xs text-primary-deep outline-none"
+              >
+                {locales.map((l) => (
+                  <option key={l.code} value={l.code}>
+                    {l.native}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
         </div>
       </header>
 

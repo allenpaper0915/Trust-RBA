@@ -3,7 +3,7 @@
  *
  * 一筆「案件」可能有兩種來源：
  *   worker —— 移工自己從移工端上傳資料而產生
- *   audit  —— 企業合規團隊抽樣稽核而產生
+ *   audit  —— 政府依風險或隨機抽樣而產生
  * 兩者進入同一個審核佇列，使用同一套 deterministic 計分。
  */
 
@@ -95,12 +95,12 @@ export type CaseRecord = CaseSeed & {
   state: CaseStatus;
   /** 費用鏈：招聘費被拆給哪幾家中間商 */
   feeItems: FeeItem[];
-  /** 身分證明是否已核驗（企業只看得到這個布林值，看不到證件） */
+  /** 身分證明是否已核驗；承辦畫面只顯示結果，不直接展開證件內容 */
   identityVerified: boolean;
   review?: ReviewRecord;
   /** 移工自己補充的說明（已去識別化） */
   workerNote?: string;
-  /** 企業回覆給移工的訊息 */
+  /** 承辦機關回覆給移工的訊息 */
   workerReply?: string;
 };
 
@@ -108,12 +108,12 @@ export const statusMeta: Record<
   CaseStatus,
   { label: string; short: string; tone: "neutral" | "primary" | "warning" | "danger" | "success" }
 > = {
-  pending_review: { label: "待人工審核", short: "待審", tone: "warning" },
-  investigating: { label: "調查中", short: "調查中", tone: "primary" },
-  need_more: { label: "需補件", short: "補件", tone: "neutral" },
-  confirmed: { label: "已確認不當收費", short: "已確認", tone: "danger" },
-  dismissed: { label: "已排除風險", short: "已排除", tone: "success" },
-  remediated: { label: "已完成返還", short: "已返還", tone: "success" },
+  pending_review: { label: "待人工複核", short: "待複核", tone: "warning" },
+  investigating: { label: "查證中", short: "查證中", tone: "primary" },
+  need_more: { label: "待補充證據", short: "待補證", tone: "neutral" },
+  confirmed: { label: "衝突已確認", short: "已確認", tone: "danger" },
+  dismissed: { label: "異常已排除", short: "已排除", tone: "success" },
+  remediated: { label: "改善已完成", short: "已改善", tone: "success" },
 };
 
 export const decisionMeta: Record<
@@ -121,23 +121,23 @@ export const decisionMeta: Record<
   { label: string; detail: string; next: CaseStatus }
 > = {
   investigating: {
-    label: "受理並展開調查",
-    detail: "證據足以啟動內部調查，通知仲介提供對應紀錄。",
+    label: "受理並展開查證",
+    detail: "證據足以啟動行政查證，通知權責機關或關係人提供對應紀錄。",
     next: "investigating",
   },
   need_more: {
-    label: "要求補件",
-    detail: "證據不足以支撐結論，請申報人或仲介補充特定文件。",
+    label: "要求補充證據",
+    detail: "證據不足以支撐結論，向資料權責機關、移工、雇主或仲介調閱特定資料。",
     next: "need_more",
   },
   confirmed: {
-    label: "確認不當收費",
-    detail: "證據充分且相互佐證，認定違反 RBA 招聘費規範，進入返還程序。",
+    label: "確認證據衝突",
+    detail: "證據充分且相互佐證，確認制度資料與現場狀態不一致，轉入訪查或改善程序。",
     next: "confirmed",
   },
   dismissed: {
-    label: "排除風險",
-    detail: "經查證後屬合法收費或誤報，結案並記錄理由。",
+    label: "排除異常",
+    detail: "經查證後屬合法狀態、合理時間差或誤報，結案並記錄理由。",
     next: "dismissed",
   },
 };
@@ -173,11 +173,11 @@ export const docKindMeta: Record<
   other: { label: "其他文件", hint: "任何你認為與收費有關的文件", weight: "independent" },
 };
 
-/** 企業端的合規人員，供指派使用。 */
+/** 地方政府承辦角色，供案件指派使用。 */
 export const reviewers = [
-  "林郁婷（合規主管）",
-  "陳彥廷（合規專員）",
-  "Nguyen Thi Mai（越南語專員）",
+  "林郁婷（移工科股長）",
+  "陳彥廷（案件承辦人）",
+  "Nguyen Thi Mai（越南語協力員）",
 ];
 
 /**

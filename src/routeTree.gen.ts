@@ -10,11 +10,14 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AgencyRouteImport } from './routes/agency'
 import { Route as AssuranceRouteImport } from './routes/assurance'
 import { Route as AuditRouteImport } from './routes/audit'
 import { Route as CredentialRouteImport } from './routes/credential'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as EnterpriseRouteImport } from './routes/enterprise'
 import { Route as EvidenceRouteImport } from './routes/evidence'
+import { Route as InspectionsRouteImport } from './routes/inspections'
 import { Route as PackRouteImport } from './routes/pack'
 import { Route as RemediationRouteImport } from './routes/remediation'
 import { Route as ResetRouteImport } from './routes/reset'
@@ -31,6 +34,11 @@ import { Route as WorkerCaseCodeRouteImport } from './routes/worker/case.$code'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AgencyRoute = AgencyRouteImport.update({
+  id: '/agency',
+  path: '/agency',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AssuranceRoute = AssuranceRouteImport.update({
@@ -53,9 +61,19 @@ const DashboardRoute = DashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
+const EnterpriseRoute = EnterpriseRouteImport.update({
+  id: '/enterprise',
+  path: '/enterprise',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const EvidenceRoute = EvidenceRouteImport.update({
   id: '/evidence',
   path: '/evidence',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InspectionsRoute = InspectionsRouteImport.update({
+  id: '/inspections',
+  path: '/inspections',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PackRoute = PackRouteImport.update({
@@ -121,11 +139,14 @@ const WorkerCaseCodeRoute = WorkerCaseCodeRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/agency': typeof AgencyRoute
   '/assurance': typeof AssuranceRoute
   '/audit': typeof AuditRoute
   '/credential': typeof CredentialRoute
   '/dashboard': typeof DashboardRoute
+  '/enterprise': typeof EnterpriseRoute
   '/evidence': typeof EvidenceRoute
+  '/inspections': typeof InspectionsRoute
   '/pack': typeof PackRoute
   '/remediation': typeof RemediationRoute
   '/reset': typeof ResetRoute
@@ -141,11 +162,14 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/agency': typeof AgencyRoute
   '/assurance': typeof AssuranceRoute
   '/audit': typeof AuditRoute
   '/credential': typeof CredentialRoute
   '/dashboard': typeof DashboardRoute
+  '/enterprise': typeof EnterpriseRoute
   '/evidence': typeof EvidenceRoute
+  '/inspections': typeof InspectionsRoute
   '/pack': typeof PackRoute
   '/remediation': typeof RemediationRoute
   '/reset': typeof ResetRoute
@@ -162,11 +186,14 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/agency': typeof AgencyRoute
   '/assurance': typeof AssuranceRoute
   '/audit': typeof AuditRoute
   '/credential': typeof CredentialRoute
   '/dashboard': typeof DashboardRoute
+  '/enterprise': typeof EnterpriseRoute
   '/evidence': typeof EvidenceRoute
+  '/inspections': typeof InspectionsRoute
   '/pack': typeof PackRoute
   '/remediation': typeof RemediationRoute
   '/reset': typeof ResetRoute
@@ -184,11 +211,14 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/agency'
     | '/assurance'
     | '/audit'
     | '/credential'
     | '/dashboard'
+    | '/enterprise'
     | '/evidence'
+    | '/inspections'
     | '/pack'
     | '/remediation'
     | '/reset'
@@ -204,11 +234,14 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/agency'
     | '/assurance'
     | '/audit'
     | '/credential'
     | '/dashboard'
+    | '/enterprise'
     | '/evidence'
+    | '/inspections'
     | '/pack'
     | '/remediation'
     | '/reset'
@@ -224,11 +257,14 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/agency'
     | '/assurance'
     | '/audit'
     | '/credential'
     | '/dashboard'
+    | '/enterprise'
     | '/evidence'
+    | '/inspections'
     | '/pack'
     | '/remediation'
     | '/reset'
@@ -245,11 +281,14 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AgencyRoute: typeof AgencyRoute
   AssuranceRoute: typeof AssuranceRoute
   AuditRoute: typeof AuditRoute
   CredentialRoute: typeof CredentialRoute
   DashboardRoute: typeof DashboardRoute
+  EnterpriseRoute: typeof EnterpriseRoute
   EvidenceRoute: typeof EvidenceRoute
+  InspectionsRoute: typeof InspectionsRoute
   PackRoute: typeof PackRoute
   RemediationRoute: typeof RemediationRoute
   ResetRoute: typeof ResetRoute
@@ -271,6 +310,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/agency': {
+      id: '/agency'
+      path: '/agency'
+      fullPath: '/agency'
+      preLoaderRoute: typeof AgencyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/assurance': {
@@ -301,11 +347,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/enterprise': {
+      id: '/enterprise'
+      path: '/enterprise'
+      fullPath: '/enterprise'
+      preLoaderRoute: typeof EnterpriseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/evidence': {
       id: '/evidence'
       path: '/evidence'
       fullPath: '/evidence'
       preLoaderRoute: typeof EvidenceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/inspections': {
+      id: '/inspections'
+      path: '/inspections'
+      fullPath: '/inspections'
+      preLoaderRoute: typeof InspectionsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/pack': {
@@ -397,11 +457,14 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AgencyRoute: AgencyRoute,
   AssuranceRoute: AssuranceRoute,
   AuditRoute: AuditRoute,
   CredentialRoute: CredentialRoute,
   DashboardRoute: DashboardRoute,
+  EnterpriseRoute: EnterpriseRoute,
   EvidenceRoute: EvidenceRoute,
+  InspectionsRoute: InspectionsRoute,
   PackRoute: PackRoute,
   RemediationRoute: RemediationRoute,
   ResetRoute: ResetRoute,

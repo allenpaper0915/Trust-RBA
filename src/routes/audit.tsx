@@ -11,7 +11,7 @@ import {
   Wrench,
 } from "lucide-react";
 
-import { credential, revocationAuditLog } from "@/data/compliance";
+import { revocationAuditLog } from "@/data/compliance";
 import { usePlatform } from "@/components/platform-store";
 import { PageHeader } from "@/components/page-header";
 import { StatusPill } from "@/components/status-pill";
@@ -28,13 +28,12 @@ import {
 export const Route = createFileRoute("/audit")({
   head: () => ({
     meta: [
-      { title: "AI 稽核紀錄｜TrustRBA" },
+      { title: "稽核紀錄｜移工狀態雷達" },
       {
         name: "description",
-        content:
-          "每一筆 AI 行動都留下時間、執行者、行動、證據、授權與結果，讓 AI 的決策過程可以被事後審查。",
+        content: "每一筆規則引擎與人工行動都留下時間、執行者、證據、授權與結果，供事後審查。",
       },
-      { property: "og:title", content: "AI 稽核紀錄｜TrustRBA" },
+      { property: "og:title", content: "稽核紀錄｜移工狀態雷達" },
       { property: "og:description", content: "AI Audit Log：可追溯性是信任的前提。" },
     ],
   }),
@@ -42,15 +41,17 @@ export const Route = createFileRoute("/audit")({
 });
 
 const actorLabel = {
+  agency: "仲介機構",
+  enterprise: "聘僱企業",
   worker: "移工",
-  ai: "AI Agent",
-  reviewer: "合規人員",
+  ai: "規則引擎",
+  reviewer: "政府承辦",
   system: "系統",
 } as const;
 
 function ActorIcon({ actor }: { actor: string }) {
-  if (actor === "AI Agent") return <Bot className="size-3.5" />;
-  if (actor === "合規人員" || actor === "合規管理員") return <User className="size-3.5" />;
+  if (actor === "規則引擎") return <Bot className="size-3.5" />;
+  if (actor === "政府承辦") return <User className="size-3.5" />;
   if (actor === "移工") return <Users className="size-3.5" />;
   return <ShieldCheck className="size-3.5" />;
 }
@@ -93,6 +94,12 @@ function AuditPage() {
     }
     return base;
   }, [events, revoked, caseFilter]);
+
+  const activity = {
+    engine: entries.filter((entry) => entry.actor === "規則引擎").length,
+    reviewer: entries.filter((entry) => entry.actor === "政府承辦").length,
+    system: entries.filter((entry) => entry.actor === "系統").length,
+  };
 
   // 雜湊鏈：每一筆紀錄含前一筆的雜湊，事後改動任何一筆都會讓後面全部對不上。
   const [chain, setChain] = useState<ChainedRecord<unknown>[]>([]);
@@ -142,31 +149,12 @@ function AuditPage() {
   };
 
   return (
-    <div className="space-y-12">
+    <div className="space-y-10">
       <PageHeader
-        eyebrow="AI AUDIT LOG"
+        eyebrow="DECISION AUDIT LOG"
         title="稽核紀錄"
-        subtitle={`平台上每一筆 AI 與人工行動 · Credential ${credential.id}`}
-        aside={<StatusPill tone="primary">{entries.length} 筆行動紀錄</StatusPill>}
+        subtitle="先確認整體紀錄是否完整與可追溯；需要調查時，再按權限展開個別行動。"
       />
-
-      <div className="flex flex-wrap items-center gap-3">
-        <label className="text-xs text-muted-foreground">
-          篩選案件
-          <select
-            value={caseFilter}
-            onChange={(e) => setCaseFilter(e.target.value)}
-            className="ml-2 rounded-md border border-border bg-card px-3 py-2 text-sm text-primary-deep outline-none"
-          >
-            <option value="all">全部案件</option>
-            {cases.map((c) => (
-              <option key={c.id} value={c.id}>
-                #{c.id} · {c.agency}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
 
       {/* 完整性：紀錄能不能被事後改掉，是稽核的另一半問題 */}
       <section
@@ -236,78 +224,122 @@ function AuditPage() {
             )}
           </div>
         </div>
+        <div className="mt-7 grid gap-px overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-4">
+          {[
+            ["全部可追溯行動", entries.length],
+            ["規則引擎比對", activity.engine],
+            ["政府承辦處置", activity.reviewer],
+            ["系統狀態更新", activity.system],
+          ].map(([label, value]) => (
+            <div key={label} className="bg-card px-5 py-4">
+              <div className="text-xs text-muted-foreground">{label}</div>
+              <div className="num mt-1.5 text-2xl text-primary-deep">{value}</div>
+            </div>
+          ))}
+        </div>
       </section>
 
-      <section className="card-surface overflow-x-auto">
-        <div className="grid min-w-[1180px] grid-cols-[150px_110px_1fr_1fr_150px_140px_130px] gap-4 border-b border-border bg-secondary px-7 py-3.5 text-xs font-medium text-muted-foreground">
-          <span>時間</span>
-          <span>執行者</span>
-          <span>行動</span>
-          <span>證據</span>
-          <span>授權</span>
-          <span>結果</span>
-          <span>雜湊</span>
+      <details className="card-surface group overflow-hidden">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-7 py-5">
+          <div>
+            <h2 className="font-semibold text-primary-deep">原始行動紀錄</h2>
+            <p className="mt-1 text-xs text-muted-foreground">
+              展開後才顯示個案編號、授權依據與逐筆雜湊。
+            </p>
+          </div>
+          <span className="text-sm text-primary group-open:hidden">展開 {entries.length} 筆</span>
+          <span className="hidden text-sm text-muted-foreground group-open:inline">收合</span>
+        </summary>
+
+        <div className="flex flex-wrap items-center gap-3 border-t border-border bg-secondary px-7 py-4">
+          <label className="text-xs text-muted-foreground">
+            篩選個案
+            <select
+              value={caseFilter}
+              onChange={(e) => setCaseFilter(e.target.value)}
+              className="ml-2 rounded-md border border-border bg-card px-3 py-2 text-sm text-primary-deep outline-none"
+            >
+              <option value="all">全部個案</option>
+              {cases.map((c) => (
+                <option key={c.id} value={c.id}>
+                  #{c.id} · {c.agency}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
 
-        <ol className="divide-y divide-border">
-          {entries.map((e, i) => (
-            <li
-              key={`${e.time}-${e.action}-${i}`}
-              className={cn(
-                "grid min-w-[1180px] grid-cols-[150px_110px_1fr_1fr_150px_140px_130px] items-start gap-4 px-7 py-4 text-sm transition-colors hover:bg-muted/60",
-                e.revocation && "bg-danger-soft/40",
-                verdict && !verdict.ok && i >= verdict.brokenAt && "bg-danger-soft/60",
-              )}
-            >
-              <span className="num text-xs text-muted-foreground">
-                {e.time}
-                {e.caseId && (
-                  <Link
-                    to="/cases/$id"
-                    params={{ id: e.caseId }}
-                    className="mt-0.5 block text-[11px] text-primary hover:underline"
-                  >
-                    #{e.caseId}
-                  </Link>
-                )}
-              </span>
-              <span
+        <div className="overflow-x-auto">
+          <div className="grid min-w-[1180px] grid-cols-[150px_110px_1fr_1fr_150px_140px_130px] gap-4 border-b border-border bg-secondary px-7 py-3.5 text-xs font-medium text-muted-foreground">
+            <span>時間</span>
+            <span>執行者</span>
+            <span>行動</span>
+            <span>證據</span>
+            <span>授權</span>
+            <span>結果</span>
+            <span>雜湊</span>
+          </div>
+
+          <ol className="divide-y divide-border">
+            {entries.map((e, i) => (
+              <li
+                key={`${e.time}-${e.action}-${i}`}
                 className={cn(
-                  "inline-flex items-center gap-1.5 self-start rounded border px-2 py-0.5 text-[11px]",
-                  e.actor === "合規人員"
-                    ? "border-success/30 bg-success-soft text-success"
-                    : "border-border bg-card text-muted-foreground",
+                  "grid min-w-[1180px] grid-cols-[150px_110px_1fr_1fr_150px_140px_130px] items-start gap-4 px-7 py-4 text-sm transition-colors hover:bg-muted/60",
+                  e.revocation && "bg-danger-soft/40",
+                  verdict && !verdict.ok && i >= verdict.brokenAt && "bg-danger-soft/60",
                 )}
               >
-                <ActorIcon actor={e.actor} />
-                {e.actor}
-              </span>
-              <span className="font-medium text-primary-deep">{e.action}</span>
-              <span className="text-xs leading-relaxed text-muted-foreground">{e.evidence}</span>
-              <span className="text-xs leading-relaxed text-muted-foreground">{e.auth}</span>
-              <span
-                className={cn(
-                  "text-xs font-medium",
-                  e.revocation ? "text-danger" : "text-primary-deep",
-                )}
-              >
-                {e.result}
-              </span>
-              <span
-                className={cn(
-                  "num text-[11px] break-all",
-                  verdict && !verdict.ok && i >= verdict.brokenAt
-                    ? "text-danger"
-                    : "text-muted-foreground/70",
-                )}
-                title={chain[i]?.hash}
-              >
-                {chain[i] ? shortHash(chain[i]!.hash) : "…"}
-              </span>
-            </li>
-          ))}
-        </ol>
-      </section>
+                <span className="num text-xs text-muted-foreground">
+                  {e.time}
+                  {e.caseId && (
+                    <Link
+                      to="/cases/$id"
+                      params={{ id: e.caseId }}
+                      className="mt-0.5 block text-[11px] text-primary hover:underline"
+                    >
+                      #{e.caseId}
+                    </Link>
+                  )}
+                </span>
+                <span
+                  className={cn(
+                    "inline-flex items-center gap-1.5 self-start rounded border px-2 py-0.5 text-[11px]",
+                    e.actor === "政府承辦"
+                      ? "border-success/30 bg-success-soft text-success"
+                      : "border-border bg-card text-muted-foreground",
+                  )}
+                >
+                  <ActorIcon actor={e.actor} />
+                  {e.actor}
+                </span>
+                <span className="font-medium text-primary-deep">{e.action}</span>
+                <span className="text-xs leading-relaxed text-muted-foreground">{e.evidence}</span>
+                <span className="text-xs leading-relaxed text-muted-foreground">{e.auth}</span>
+                <span
+                  className={cn(
+                    "text-xs font-medium",
+                    e.revocation ? "text-danger" : "text-primary-deep",
+                  )}
+                >
+                  {e.result}
+                </span>
+                <span
+                  className={cn(
+                    "num text-[11px] break-all",
+                    verdict && !verdict.ok && i >= verdict.brokenAt
+                      ? "text-danger"
+                      : "text-muted-foreground/70",
+                  )}
+                  title={chain[i]?.hash}
+                >
+                  {chain[i] ? shortHash(chain[i]!.hash) : "…"}
+                </span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </details>
     </div>
   );
 }
